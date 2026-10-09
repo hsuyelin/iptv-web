@@ -133,3 +133,56 @@ describe('default engine', () => {
     load.mockRestore()
   })
 })
+
+describe('native HLS (iOS 9 on an iPad: no Media Source Extensions, built-in HLS player)', () => {
+  const nativeVideo = (play: () => unknown = () => undefined) => {
+    const element = video()
+    element.canPlayType = () => 'maybe'
+    element.load = vi.fn()
+    element.play = vi.fn(play) as unknown as HTMLVideoElement['play']
+    return element
+  }
+  const begin = (element: HTMLVideoElement) => {
+    const engine = createDefaultEngine({ onFatal: vi.fn() })
+    engine.attach(element)
+    engine.load('http://relay/live/a.m3u8')
+    return engine
+  }
+
+  it('hands the stream to the browser and asks it to play, without loading hls.js', async () => {
+    const element = nativeVideo()
+    begin(element)
+    await tick()
+    expect(element.getAttribute('src')).toBe('http://relay/live/a.m3u8')
+    expect(element.load).toHaveBeenCalledTimes(1)
+    expect(element.play).toHaveBeenCalledTimes(1)
+    expect(fake.state.instances).toHaveLength(0)
+  })
+
+  it('is not troubled when the browser refuses to play without a tap', async () => {
+    const element = nativeVideo(() => Promise.reject(new Error('NotAllowedError')))
+    begin(element)
+    await tick()
+    expect(element.getAttribute('src')).toBe('http://relay/live/a.m3u8')
+  })
+
+  it('still uses hls.js where Media Source Extensions exist', async () => {
+    ;(window as unknown as { MediaSource: unknown }).MediaSource = class {}
+    try {
+      begin(nativeVideo())
+      await tick()
+      expect(fake.state.instances).toHaveLength(1)
+    } finally {
+      Reflect.deleteProperty(window, 'MediaSource')
+    }
+  })
+
+  it('uses hls.js when the browser cannot play HLS either', async () => {
+    const element = video()
+    element.canPlayType = () => ''
+    begin(element)
+    await tick()
+    expect(fake.state.instances).toHaveLength(1)
+  })
+})
+

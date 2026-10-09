@@ -59,7 +59,10 @@ function Row({ title, channels, selectedSlug, unavailable, onSelect }: RowProps)
   const scroll = (direction: 1 | -1) => {
     const element = track.current
     if (!element) return
-    element.scrollBy({ left: direction * element.clientWidth * 0.85, behavior: 'smooth' })
+    const distance = direction * element.clientWidth * 0.85
+    // Element.scrollBy is newer than the browsers that still need these arrows' fallback.
+    if (typeof element.scrollBy === 'function') element.scrollBy({ left: distance, behavior: 'smooth' })
+    else element.scrollLeft += distance
   }
   return (
     <div className={styles.row}>

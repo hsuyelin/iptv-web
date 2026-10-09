@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
+    <script>
+      // Old browsers (iOS before 15, among others) lack aspect-ratio, inset and clamp(), and
+      // flex gap has no test of its own: aspect-ratio arrived after all of them. They get the
+      // plainer layout under .legacy in the stylesheets. Written in ES3 on purpose.
+      ;(function () {
+        var root = document.documentElement
+        try {
+          var css = window.CSS
+          if (
+            css &&
+            css.supports &&
+            css.supports('aspect-ratio', '1') &&
+            css.supports('inset', '0') &&
+            css.supports('width', 'clamp(1px, 2vw, 3px)')
+          ) {
+            return
+          }
+        } catch (error) {}
+        root.className += ' legacy'
+      })()
+    </script>
     <title>IPTV</title>
     <meta name="description" content="IPTV" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23141414'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23B8444B'/%3E%3C/svg%3E" />

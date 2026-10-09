@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Channel } from '../../api/types'
 import type { EngineEvents, EngineFactory, PlaybackEngine } from './playback/engine'
 import { Player } from './Player'
@@ -41,6 +41,48 @@ describe('Player', () => {
     expect(screen.getByText('Loading the stream…')).toBeInTheDocument()
   })
 
+  describe('which stream it asks for', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      window.history.replaceState({}, '', '/')
+    })
+
+    const first = () => {
+      const { log, factory } = recorder()
+      render(<Player channel={cctv1} unavailable={false} factory={factory} />)
+      return log.find((entry) => entry.startsWith('load'))
+    }
+
+    it('asks for the normal stream by default', () => {
+      expect(first()).toBe('load#1 http://relay.test/live/cctv1.m3u8')
+    })
+
+    it('asks for the lighter stream on an iPad running iOS 9', () => {
+      vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(
+        'Mozilla/5.0 (iPad; CPU OS 9_3_5 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13G36 Safari/601.1',
+      )
+      expect(first()).toBe('load#1 http://relay.test/live/cctv1.m3u8?profile=compat')
+    })
+
+    it('asks for the lighter stream when the address says ?compat=1, on any device', () => {
+      window.history.replaceState({}, '', '/?compat=1')
+      expect(first()).toBe('load#1 http://relay.test/live/cctv1.m3u8?profile=compat')
+    })
+
+    it('stays on one stream when the channel changes, so the picture is not restarted', () => {
+      window.history.replaceState({}, '', '/?compat=1')
+      const { log, factory } = recorder()
+      const { rerender } = render(<Player channel={cctv1} unavailable={false} factory={factory} />)
+      window.history.replaceState({}, '', '/?compat=0')
+      rerender(<Player channel={cctv2} unavailable={false} factory={factory} />)
+      const loads = log.filter((entry) => entry.startsWith('load'))
+      expect(loads).toEqual([
+        'load#1 http://relay.test/live/cctv1.m3u8?profile=compat',
+        'load#2 http://relay.test/live/cctv2.m3u8',
+      ])
+    })
+  })
+
   it('detaches the first stream before the second one loads', () => {
     const { log, factory } = recorder()
     const { rerender } = render(<Player channel={cctv1} unavailable={false} factory={factory} />)
@@ -72,6 +114,25 @@ describe('Player', () => {
     expect(screen.getByText('Buffering…')).toBeInTheDocument()
     fireEvent.playing(video())
     expect(screen.queryByText('Buffering…')).not.toBeInTheDocument()
+  })
+
+  it('stops saying "loading" once the video is ready but waiting for a tap', () => {
+    render(<Player channel={cctv1} unavailable={false} factory={recorder().factory} />)
+    expect(screen.getByText('Loading the stream…')).toBeInTheDocument()
+    // iOS 9 will not autoplay: the video can play, yet stays paused until it is tapped.
+    fireEvent.canPlay(video())
+    expect(screen.queryByText('Loading the stream…')).not.toBeInTheDocument()
+    expect(video().closest('[data-state]')).toHaveAttribute('data-state', 'ready')
+    // The tap starts it, as before.
+    fireEvent.playing(video())
+    expect(video().closest('[data-state]')).toHaveAttribute('data-state', 'playing')
+  })
+
+  it('does not call a playing video "ready" again when it can play on', () => {
+    render(<Player channel={cctv1} unavailable={false} factory={recorder().factory} />)
+    fireEvent.playing(video())
+    fireEvent.canPlay(video())
+    expect(video().closest('[data-state]')).toHaveAttribute('data-state', 'playing')
   })
 
   it('shows no on-air status line under the screen', () => {

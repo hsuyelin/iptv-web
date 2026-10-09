@@ -1,16 +1,19 @@
 /* A glass panel along the right edge of the screen, above the native controls. */
 .playlist {
   position: absolute;
-  inset: 0 0 56px auto;
+  top: 0;
+  right: 0;
+  bottom: 56px;
   z-index: 3;
   display: flex;
   flex-direction: column;
-  width: min(320px, 70%);
+  width: 70%;
+  max-width: 320px;
   color: var(--ink);
   background: rgba(16, 16, 16, 0.62);
-  backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
-  border-inline-start: 1px solid var(--glass-line);
+  backdrop-filter: var(--blur);
+  border-left: 1px solid var(--glass-line);
   animation: slide-in 0.2s ease-out;
 }
 
@@ -56,11 +59,13 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   padding-bottom: var(--space-2);
 }
 
 .groupName {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   margin: 0;
@@ -89,7 +94,7 @@
   color: inherit;
   background: transparent;
   border: 0;
-  border-inline-start: 3px solid transparent;
+  border-left: 3px solid transparent;
 }
 
 .item:hover {
@@ -98,7 +103,7 @@
 
 .item[aria-current='true'] {
   background: rgba(255, 255, 255, 0.14);
-  border-inline-start-color: var(--accent);
+  border-left-color: var(--accent);
   font-weight: 700;
 }
 
@@ -128,4 +133,42 @@
   font-size: var(--text-sm);
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+/* Legacy browsers: buttons hold inline content, not a flex row; no aspect-ratio or object-fit. */
+:global(.legacy) .close {
+  display: block;
+  text-align: center;
+}
+
+:global(.legacy) .item {
+  display: block;
+  text-align: left;
+}
+
+:global(.legacy) .logo {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  height: 31.5px;
+}
+
+:global(.legacy) .logo img {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: auto;
+  height: auto;
+  max-width: calc(100% - 6px);
+  max-height: calc(100% - 6px);
+  margin: auto;
+}
+
+:global(.legacy) .name {
+  display: inline-block;
+  vertical-align: middle;
+  width: calc(100% - 68px);
+  margin-left: var(--space-3);
 }

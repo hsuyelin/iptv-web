@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { formatDuration as formatDurationIn, formatNumber as formatNumberIn } from '../lib/format'
 import { LOCALES, MESSAGES, type Locale, type MessageKey } from './messages'
 
 const STORAGE_KEY = 'iptv-web-locale'
@@ -78,36 +79,11 @@ export function useI18n(): I18n {
     (key, params) => format(MESSAGES[locale][key], params),
     [locale],
   )
-  const formatNumber = useCallback(
-    (value: number) => new Intl.NumberFormat(locale).format(value),
-    [locale],
-  )
+  const formatNumber = useCallback((value: number) => formatNumberIn(value, locale), [locale])
   const formatClock = useCallback(
     (epochMs: number) => new Date(epochMs).toLocaleTimeString(locale, { hour12: false }),
     [locale],
   )
-  const formatDuration = useCallback(
-    (ms: number) => {
-      const seconds = Math.max(0, Math.floor(ms / 1000))
-      const parts: Array<[number, Intl.NumberFormatOptions['unit']]> = [
-        [Math.floor(seconds / 86_400), 'day'],
-        [Math.floor((seconds % 86_400) / 3600), 'hour'],
-        [Math.floor((seconds % 3600) / 60), 'minute'],
-        [seconds % 60, 'second'],
-      ]
-      const used = parts.filter(([value]) => value > 0).slice(0, 2)
-      const shown = used.length > 0 ? used : [parts[3]!]
-      return shown
-        .map(([value, unit]) =>
-          new Intl.NumberFormat(locale, {
-            style: 'unit',
-            unit,
-            unitDisplay: 'narrow',
-          }).format(value),
-        )
-        .join(' ')
-    },
-    [locale],
-  )
+  const formatDuration = useCallback((ms: number) => formatDurationIn(ms, locale), [locale])
   return { locale, setLocale, t, formatNumber, formatClock, formatDuration }
 }

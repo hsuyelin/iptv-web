@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server, RELAY, channelsPayload, healthPayload } from '../test/server'
 import {
   ApiError,
@@ -138,3 +138,53 @@ describe('verifyAdminKey', () => {
     expect(await verifyAdminKey('k')).toEqual({ verdict: 'error', retryAfterSecs: null })
   })
 })
+
+describe('on a browser without AbortSignal.any and AbortSignal.timeout', () => {
+  // Safari before 16 and 17.4: calling either throws, which once made a healthy relay look
+  // unreachable on an iPhone.
+  const saved = {
+    any: Object.getOwnPropertyDescriptor(AbortSignal, 'any'),
+    timeout: Object.getOwnPropertyDescriptor(AbortSignal, 'timeout'),
+  }
+  beforeEach(() => {
+    Reflect.deleteProperty(AbortSignal, 'any')
+    Reflect.deleteProperty(AbortSignal, 'timeout')
+  })
+  afterEach(() => {
+    if (saved.any) Object.defineProperty(AbortSignal, 'any', saved.any)
+    if (saved.timeout) Object.defineProperty(AbortSignal, 'timeout', saved.timeout)
+  })
+
+  it('really lacks them here', () => {
+    expect('any' in AbortSignal).toBe(false)
+    expect('timeout' in AbortSignal).toBe(false)
+  })
+
+  it('still loads the channels and the health', async () => {
+    expect((await fetchChannels()).length).toBeGreaterThan(0)
+    expect((await fetchHealth()).channelCount).toBeGreaterThan(0)
+    expect((await fetchChannels(new AbortController().signal)).length).toBeGreaterThan(0)
+  })
+
+  it('still checks an administrator key', async () => {
+    server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json({ ok: true })))
+    expect((await verifyAdminKey('k')).verdict).toBe('granted')
+    server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json({ ok: false }, { status: 403 })))
+    expect((await verifyAdminKey('k')).verdict).toBe('denied')
+  })
+
+  it('still reports a relay that really is down', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.error()))
+    await expect(fetchChannels()).rejects.toMatchObject({ failure: 'network' })
+  })
+})
+
+describe('livePlaylistUrl', () => {
+  it('is the normal playlist unless the lighter stream is asked for', () => {
+    expect(livePlaylistUrl('cctv1')).toBe(`${RELAY}/live/cctv1.m3u8`)
+    expect(livePlaylistUrl('cctv1', false)).toBe(`${RELAY}/live/cctv1.m3u8`)
+    expect(livePlaylistUrl('cctv1', true)).toBe(`${RELAY}/live/cctv1.m3u8?profile=compat`)
+    expect(livePlaylistUrl('a b', true)).toBe(`${RELAY}/live/a%20b.m3u8?profile=compat`)
+  })
+})
+

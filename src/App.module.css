@@ -1,4 +1,5 @@
 .app {
+  min-height: 100vh;
   min-height: 100dvh;
   font-size: var(--text-md);
   color: var(--ink);
@@ -13,8 +14,10 @@
 .content {
   display: grid;
   gap: var(--space-5);
-  width: min(100%, var(--page-max));
-  margin-inline: auto;
+  width: 100%;
+  max-width: var(--page-max);
+  margin-left: auto;
+  margin-right: auto;
   padding: var(--space-3) var(--gutter) var(--space-6);
   min-width: 0;
 }
@@ -31,4 +34,18 @@
   --chip-wrap: wrap;
   --chip-overflow: visible;
   line-height: 1.55;
+}
+
+/* Legacy browsers: blocks and margins in place of grid and gap. */
+:global(.legacy) .main,
+:global(.legacy) .content {
+  display: block;
+}
+
+:global(.legacy) .content > * + * {
+  margin-top: var(--space-5);
+}
+
+:global(.legacy) .app[data-senior='true'] {
+  --text-xl: 2.25rem;
 }

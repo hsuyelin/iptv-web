@@ -58,3 +58,26 @@
   --gutter: clamp(16px, 4vw, 56px);
   --page-max: 2000px;
 }
+
+/*
+ * Legacy browsers (see the script in index.html): no clamp(), so the fluid sizes become
+ * steps. Every rule below `.legacy` in the stylesheets is a plainer layout for them.
+ */
+html.legacy {
+  --text-xl: 1.75rem;
+  --gutter: 24px;
+}
+
+@media (max-width: 640px) {
+  html.legacy {
+    --text-xl: 1.5rem;
+    --gutter: 16px;
+  }
+}
+
+@media (min-width: 1100px) {
+  html.legacy {
+    --text-xl: 2.125rem;
+    --gutter: 48px;
+  }
+}

@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
+import { compatWanted } from '../../lib/compat'
 import { ArrowUpIcon, CloseIcon, ListIcon, PlayIcon } from '../../components/Icons'
 import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
@@ -152,8 +153,10 @@ function Surface({
   // The sticky bar covers the top of the page, so the slot counts as gone once it is under it.
   const visible = useInView(slotRef, { threshold: 0.25, rootMargin: '-72px 0px 0px 0px' })
   const floating = !visible
+  // Decided once per screen: switching the stream under a playing video would restart it.
+  const [compat] = useState(compatWanted)
   const { videoRef, state, failure, handlers } = useHlsPlayback({
-    url: livePlaylistUrl(channel.slug),
+    url: livePlaylistUrl(channel.slug, compat),
     ...(factory ? { factory } : {}),
   })
   const canBrowse = onSelect !== undefined && channels.length > 0

@@ -1,3 +1,4 @@
+import { timedSignal } from '../lib/abort'
 import type { Channel, RelayHealth } from './types'
 
 /** Why a call to the relay failed. */
@@ -28,28 +29,32 @@ export function relayUrl(path: string): string {
   return `${relayBase()}${path}`
 }
 
-/** URL of a channel's live playlist. */
-export function livePlaylistUrl(slug: string): string {
-  return relayUrl(`/live/${encodeURIComponent(slug)}.m3u8`)
+/** URL of a channel's live playlist; `compat` asks for the lighter stream for old devices. */
+export function livePlaylistUrl(slug: string, compat = false): string {
+  const profile = compat ? '?profile=compat' : ''
+  return relayUrl(`/live/${encodeURIComponent(slug)}.m3u8${profile}`)
 }
 
 async function fetchJson(path: string, signal: AbortSignal | undefined): Promise<unknown> {
-  const timeout = AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
-  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
-  let response: Response
+  const { signal: timed, done } = timedSignal(DEFAULT_TIMEOUT_MS, signal)
   try {
-    response = await fetch(relayUrl(path), { signal: combined })
-  } catch (cause) {
-    const reason = cause instanceof Error ? cause.message : 'request failed'
-    throw new ApiError('network', `Relay unreachable: ${reason}`)
-  }
-  if (!response.ok) {
-    throw new ApiError('status', `Relay answered ${response.status}`, response.status)
-  }
-  try {
-    return await response.json()
-  } catch {
-    throw new ApiError('shape', 'Relay sent a response that is not JSON')
+    let response: Response
+    try {
+      response = await fetch(relayUrl(path), { signal: timed })
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : 'request failed'
+      throw new ApiError('network', `Relay unreachable: ${reason}`)
+    }
+    if (!response.ok) {
+      throw new ApiError('status', `Relay answered ${response.status}`, response.status)
+    }
+    try {
+      return await response.json()
+    } catch {
+      throw new ApiError('shape', 'Relay sent a response that is not JSON')
+    }
+  } finally {
+    done()
   }
 }
 
@@ -143,7 +148,7 @@ const seconds = (value: unknown): number | null => {
  * network failure, is `error`.
  */
 export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise<AdminCheck> {
-  const timeout = AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+  const { signal: timed, done } = timedSignal(DEFAULT_TIMEOUT_MS, signal)
   const outcome = (verdict: AdminVerdict, retryAfterSecs: number | null = null): AdminCheck => ({
     verdict,
     retryAfterSecs,
@@ -153,7 +158,7 @@ export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ key }),
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      signal: timed,
     })
     if (response.status === 429) {
       const body: unknown = await response.json().catch(() => null)
@@ -169,5 +174,7 @@ export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise
     return outcome(isRecord(body) && body['ok'] === true ? 'granted' : 'denied')
   } catch {
     return outcome('error')
+  } finally {
+    done()
   }
 }

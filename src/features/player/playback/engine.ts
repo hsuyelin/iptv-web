@@ -18,6 +18,20 @@ export interface EngineEvents {
 /** Creates an engine. Injected so tests can run without a real player. */
 export type EngineFactory = (events: EngineEvents) => PlaybackEngine
 
+function hasMediaSource(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    ('MediaSource' in window || 'WebKitMediaSource' in window || 'ManagedMediaSource' in window)
+  )
+}
+
+function canPlayHlsNatively(video: HTMLVideoElement): boolean {
+  return (
+    typeof video.canPlayType === 'function' &&
+    video.canPlayType('application/vnd.apple.mpegurl') !== ''
+  )
+}
+
 export const NETWORK_RETRIES = 2
 export const MEDIA_RECOVERIES = 1
 
@@ -33,6 +47,16 @@ export const createDefaultEngine: EngineFactory = (events) => {
   let hls: HlsType | null = null
 
   const start = async () => {
+    // Without Media Source Extensions (iPad before iOS 13, iPhone) hls.js cannot run, so do
+    // not even fetch it: the browser's own HLS player does the work. Old iOS also ignores
+    // `autoplay`, so ask for playback here; a refusal just leaves the play button to the viewer.
+    if (video && url !== null && !hasMediaSource() && canPlayHlsNatively(video)) {
+      video.src = url
+      video.load()
+      const started: unknown = video.play()
+      if (started instanceof Promise) started.catch(() => undefined)
+      return
+    }
     let Hls: typeof HlsType
     try {
       Hls = (await import('hls.js')).default

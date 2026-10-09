@@ -10,8 +10,10 @@
 .frame {
   display: grid;
   gap: var(--space-3);
-  width: min(100%, var(--page-max));
-  margin-inline: auto;
+  width: 100%;
+  max-width: var(--page-max);
+  margin-left: auto;
+  margin-right: auto;
   min-width: 0;
 }
 
@@ -19,14 +21,20 @@
 .slot {
   position: relative;
   /* Never taller than 62% of the window, so the rows stay in view. */
-  width: min(100%, calc(62dvh * 16 / 9));
-  margin-inline: auto;
+  width: 100%;
+  max-width: calc(62vh * 16 / 9);
+  max-width: calc(62dvh * 16 / 9);
+  margin-left: auto;
+  margin-right: auto;
   aspect-ratio: 16 / 9;
 }
 
 .screen {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   overflow: hidden;
   background: var(--screen);
   border: 1px solid var(--glass-line);
@@ -43,7 +51,10 @@
 
 .veil {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -52,8 +63,8 @@
   text-align: center;
   color: var(--on-screen);
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   pointer-events: none;
 }
 
@@ -88,9 +99,15 @@
 
 .empty {
   position: relative;
-  inset: auto;
-  width: min(100%, calc(62dvh * 16 / 9));
-  margin-inline: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: 100%;
+  max-width: calc(62vh * 16 / 9);
+  max-width: calc(62dvh * 16 / 9);
+  margin-left: auto;
+  margin-right: auto;
   aspect-ratio: 16 / 9;
   display: grid;
   place-content: center;
@@ -101,8 +118,8 @@
   background:
     radial-gradient(70% 90% at 50% 0%, rgba(184, 68, 75, 0.2), transparent 70%),
     var(--glass);
-  backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
 }
 
 /* Placeholder while the channel list loads: same box as the screen, a slow shimmer on it. */
@@ -140,7 +157,9 @@
 }
 
 .notice {
-  width: min(100%, calc(62dvh * 16 / 9));
+  width: 100%;
+  max-width: calc(62vh * 16 / 9);
+  max-width: calc(62dvh * 16 / 9);
   margin: 0 auto;
   padding: var(--space-3) var(--space-4);
   color: var(--caution);
@@ -156,7 +175,8 @@
  */
 .playlistButton {
   position: absolute;
-  inset: var(--space-3) var(--space-3) auto auto;
+  top: var(--space-3);
+  right: var(--space-3);
   z-index: 2;
   display: grid;
   place-items: center;
@@ -165,8 +185,8 @@
   font-size: 1.25rem;
   color: var(--ink);
   background: rgba(20, 20, 20, 0.55);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-line);
   border-radius: 50%;
   transition: opacity 0.2s, background 0.15s;
@@ -202,13 +222,18 @@
 /* Floating window: the screen itself, fixed to the corner. */
 .screen[data-floating='true'] {
   position: fixed;
-  inset: auto max(var(--space-4), env(safe-area-inset-right))
-    max(var(--space-4), env(safe-area-inset-bottom)) auto;
+  top: auto;
+  left: auto;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  /* Clear of the notch and the home bar, where the browser reports them. */
+  right: max(var(--space-4), env(safe-area-inset-right));
+  bottom: max(var(--space-4), env(safe-area-inset-bottom));
   /* Above every other layer, so the page never has to leave room for it. */
   z-index: 100;
-  width: min(380px, 64vw);
+  width: 64vw;
   min-width: 220px;
-  max-width: calc(100vw - 2 * var(--space-4));
+  max-width: 380px;
   height: auto;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-md);
@@ -217,7 +242,8 @@
 }
 
 .app[data-senior='true'] .screen[data-floating='true'] {
-  width: min(520px, 80vw);
+  width: 80vw;
+  max-width: 520px;
 }
 
 @keyframes float-in {
@@ -229,7 +255,9 @@
 
 .floatBar {
   position: absolute;
-  inset: 0 0 auto 0;
+  top: 0;
+  right: 0;
+  left: 0;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -256,12 +284,100 @@
   font-size: 1.1rem;
   color: var(--ink);
   background: rgba(20, 20, 20, 0.6);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-line);
   border-radius: 50%;
 }
 
 .floatButton:hover {
   background: rgba(60, 60, 60, 0.8);
+}
+
+/*
+ * Legacy browsers: no grid, gap or aspect-ratio. The 16:9 boxes get their height from a
+ * block of top padding (a percentage of the width), the stacks from margins, and the
+ * floating window from viewport units, with the same limits as the modern rules.
+ */
+:global(.legacy) .frame {
+  display: block;
+}
+
+:global(.legacy) .frame > * + * {
+  margin-top: var(--space-3);
+}
+
+:global(.legacy) .slot::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%;
+}
+
+:global(.legacy) .empty,
+:global(.legacy) .veil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(.legacy) .empty {
+  min-height: calc((100vw - 2 * var(--gutter)) * 0.5625);
+}
+
+:global(.legacy) .empty > * + *,
+:global(.legacy) .veil > * + * {
+  margin-top: var(--space-3);
+}
+
+:global(.legacy) .retry,
+:global(.legacy) .start {
+  display: inline-block;
+  text-align: center;
+}
+
+:global(.legacy) .start svg {
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+
+:global(.legacy) .playlistButton,
+:global(.legacy) .floatButton {
+  display: block;
+  text-align: center;
+}
+
+:global(.legacy) .floatBar > * + * {
+  margin-left: var(--space-1);
+}
+
+:global(.legacy) .screen[data-floating='true'] {
+  width: 64vw;
+  height: 36vw;
+}
+
+@media (min-width: 594px) {
+  :global(.legacy) .screen[data-floating='true'] {
+    width: 380px;
+    height: 214px;
+  }
+}
+
+@media (max-width: 343px) {
+  :global(.legacy) .screen[data-floating='true'] {
+    width: 220px;
+    height: 124px;
+  }
+}
+
+:global(.legacy) .app[data-senior='true'] .screen[data-floating='true'] {
+  width: 80vw;
+  height: 45vw;
+}
+
+@media (min-width: 650px) {
+  :global(.legacy) .app[data-senior='true'] .screen[data-floating='true'] {
+    width: 520px;
+    height: 293px;
+  }
 }

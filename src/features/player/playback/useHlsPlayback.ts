@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { createDefaultEngine, type EngineFactory } from './engine'
 
-export type PlaybackState = 'loading' | 'playing' | 'stalled' | 'failed'
+/** `ready`: loaded but not started, as when the browser wants a tap before it plays. */
+export type PlaybackState = 'loading' | 'ready' | 'playing' | 'stalled' | 'failed'
 
 interface Options {
   /** Playlist to play. Changing it means mounting a new surface (see `Player`). */
@@ -35,6 +36,11 @@ export function useHlsPlayback({ url, factory = createDefaultEngine }: Options) 
 
   const handlers = {
     onPlaying: () => setState('playing'),
+    onCanPlay: (event: SyntheticEvent<HTMLVideoElement>) => {
+      // Autoplay refused: stop saying "loading" and leave the play button to the viewer.
+      const video = event.currentTarget
+      setState((current) => (current === 'loading' && video.paused ? 'ready' : current))
+    },
     onWaiting: () => setState((current) => (current === 'playing' ? 'stalled' : current)),
     onError: (event: SyntheticEvent<HTMLVideoElement>) => {
       // Only the element's own errors count; children (sources) bubble here as well.

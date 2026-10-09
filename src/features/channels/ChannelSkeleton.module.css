@@ -74,3 +74,45 @@
     background-position: 0 0;
   }
 }
+
+/* Legacy browsers: the same stacks and card shapes as the real rows, without grid or gap. */
+:global(.legacy) .wall,
+:global(.legacy) .group,
+:global(.legacy) .list {
+  display: block;
+}
+
+:global(.legacy) .wall > * + * {
+  margin-top: var(--space-5);
+}
+
+:global(.legacy) .group > * + *,
+:global(.legacy) .list > * + * {
+  margin-top: var(--space-3);
+}
+
+:global(.legacy) .tiles {
+  --card-width: 156px;
+}
+
+:global(.legacy) .tiles > * + * {
+  margin-left: var(--space-3);
+}
+
+@media (min-width: 640px) {
+  :global(.legacy) .tiles {
+    --card-width: 210px;
+  }
+}
+
+@media (min-width: 1100px) {
+  :global(.legacy) .tiles {
+    --card-width: 245px;
+  }
+}
+
+:global(.legacy) .tile::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%;
+}

@@ -17,7 +17,8 @@
 .scroller {
   position: relative;
   /* Room for the hover zoom so the scroll area does not crop it. */
-  margin-inline: calc(var(--gutter) * -1);
+  margin-left: calc(var(--gutter) * -1);
+  margin-right: calc(var(--gutter) * -1);
 }
 
 .tiles {
@@ -28,8 +29,10 @@
   padding: var(--space-4) var(--gutter);
   list-style: none;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
-  scroll-padding-inline: var(--gutter);
+  scroll-padding-left: var(--gutter);
+  scroll-padding-right: var(--gutter);
   scrollbar-width: none;
 }
 
@@ -81,7 +84,10 @@
 
 .logo {
   position: absolute;
-  inset: 12% 18% 34%;
+  top: 12%;
+  right: 18%;
+  bottom: 34%;
+  left: 18%;
 }
 
 .logo img,
@@ -100,7 +106,9 @@
 
 .name {
   position: absolute;
-  inset: auto 0 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   padding: var(--space-4) var(--space-3) var(--space-2);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -116,7 +124,9 @@
 /* The red bar along the bottom edge marks what is on air. */
 .marker {
   position: absolute;
-  inset: auto 0 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   height: 4px;
   background: var(--accent);
   transform: scaleX(0);
@@ -141,7 +151,7 @@
   content: '';
   position: absolute;
   top: var(--space-2);
-  inset-inline-end: var(--space-2);
+  right: var(--space-2);
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -150,7 +160,8 @@
 
 .arrow {
   position: absolute;
-  inset-block: var(--space-4);
+  top: var(--space-4);
+  bottom: var(--space-4);
   z-index: 3;
   display: none;
   place-items: center;
@@ -158,20 +169,20 @@
   font-size: 1.5rem;
   color: var(--ink);
   background: rgba(20, 20, 20, 0.7);
-  backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
   border: 0;
   opacity: 0;
   transition: opacity 0.2s;
 }
 
 .back {
-  inset-inline-start: 0;
+  left: 0;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
 .forward {
-  inset-inline-end: 0;
+  right: 0;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
 }
 
@@ -211,8 +222,8 @@
   text-align: start;
   color: var(--ink);
   background: var(--glass);
-  backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
   border: 1px solid var(--glass-line);
   border-radius: var(--radius-lg);
   transition: background 0.15s, border-color 0.15s;
@@ -257,5 +268,103 @@
 @media (max-width: 420px) {
   .line {
     grid-template-columns: 88px minmax(0, 1fr);
+  }
+}
+
+/*
+ * Legacy browsers: margins for gaps, a padding-top block for the 16:9 cards, fixed card
+ * widths per screen width in place of clamp(), and inline content in the senior list's
+ * buttons. Logos are centred and shrunk by max-size, as object-fit is missing.
+ */
+:global(.legacy) .wall,
+:global(.legacy) .list {
+  display: block;
+}
+
+:global(.legacy) .wall > * + * {
+  margin-top: var(--space-5);
+}
+
+:global(.legacy) .list > * + * {
+  margin-top: var(--space-3);
+}
+
+:global(.legacy) .tiles {
+  --card-width: 156px;
+}
+
+:global(.legacy) .tiles > * + * {
+  margin-left: var(--space-3);
+}
+
+@media (min-width: 640px) {
+  :global(.legacy) .tiles {
+    --card-width: 210px;
+  }
+}
+
+@media (min-width: 1100px) {
+  :global(.legacy) .tiles {
+    --card-width: 245px;
+  }
+}
+
+:global(.legacy) .tile::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%;
+}
+
+:global(.legacy) .logo img,
+:global(.legacy) .lineLogo img {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+:global(.legacy) .line {
+  display: block;
+  text-align: left;
+}
+
+:global(.legacy) .lineLogo {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  width: 140px;
+  height: 79px;
+}
+
+:global(.legacy) .lineLogo img {
+  top: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
+  left: var(--space-2);
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+}
+
+:global(.legacy) .lineName {
+  display: inline-block;
+  vertical-align: middle;
+  width: calc(100% - 156px);
+  margin-left: var(--space-4);
+}
+
+@media (max-width: 420px) {
+  :global(.legacy) .lineLogo {
+    width: 88px;
+    height: 50px;
+  }
+
+  :global(.legacy) .lineName {
+    width: calc(100% - 104px);
   }
 }

@@ -2,6 +2,7 @@
 .page {
   display: grid;
   place-items: center;
+  min-height: calc(100vh - 72px);
   min-height: calc(100dvh - 72px);
   padding: var(--space-6) var(--gutter);
   background:
@@ -14,12 +15,13 @@
   display: grid;
   justify-items: center;
   gap: var(--space-3);
-  width: min(100%, 560px);
+  width: 100%;
+  max-width: 560px;
   padding: var(--space-6) var(--space-5);
   text-align: center;
   background: var(--glass);
-  backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
   border: 1px solid var(--glass-line);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
@@ -55,6 +57,7 @@
 
 .code {
   margin: 0;
+  font-size: 4.5rem;
   font-size: clamp(3.5rem, 2.5rem + 5vw, 6rem);
   font-weight: 900;
   line-height: 1;
@@ -131,6 +134,7 @@
   width: 1px;
   height: 1px;
   overflow: hidden;
+  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
 }
@@ -147,4 +151,34 @@
   .panel {
     padding: var(--space-5) var(--space-4);
   }
+}
+
+/* Legacy browsers: flex columns and margins in place of grid and gap. */
+:global(.legacy) .page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(.legacy) .panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:global(.legacy) .panel > * + * {
+  margin-top: var(--space-3);
+}
+
+/* An SVG with no height of its own can collapse inside an old flex column. */
+:global(.legacy) .card {
+  height: 58px;
+}
+
+:global(.legacy) .actions {
+  margin-top: var(--space-5);
+}
+
+:global(.legacy) .actions > * {
+  margin: 6px 6px 0;
 }
