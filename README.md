@@ -3,7 +3,7 @@
 React 19 + TypeScript web console for the `iptv-rs` relay: channel browser, live player and
 relay health. It only presents; all data comes from the relay's HTTP routes.
 
-Part of [iptv-vod](../README.md), which holds build and deployment instructions.
+Part of [iptv-vod](https://github.com/hsuyelin/iptv-vod), which holds build and deployment instructions.
 
 ```sh
 npm ci
