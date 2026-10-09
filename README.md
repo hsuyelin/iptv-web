@@ -22,64 +22,25 @@
 
 ---
 
-iptv-web is a modern web console for the [iptv-rs](https://github.com/hsuyelin/iptv-rs) relay: a channel browser, a live player and a relay dashboard. It only presents. Every piece of data comes from the relay's HTTP routes.
-
-The interface is available in English, Simplified Chinese and Traditional Chinese, adapts from phones to wide screens, and includes a senior mode with larger type and a list layout.
-
-It is one half of [iptv-vod](https://github.com/hsuyelin/iptv-vod), which builds and deploys it together with the relay.
+iptv-web is a web console for the [iptv-rs](https://github.com/hsuyelin/iptv-rs) relay: a channel browser, a live player and a relay dashboard, in English, Simplified Chinese and Traditional Chinese. It only presents; every piece of data comes from the relay's HTTP routes. It is one half of [iptv-vod](https://github.com/hsuyelin/iptv-vod), which ships it inside the relay.
 
 <strong>Want to get started?</strong><br/>
-Follow the deployment guide in <a href="https://github.com/hsuyelin/iptv-vod#readme">iptv-vod</a>, or <a href="#running-the-console">run it from source</a>.<br/>
+Run it with Docker or the binary as described in <a href="https://github.com/hsuyelin/iptv-vod#readme">iptv-vod</a>.<br/>
 
 <strong>Something not working right?</strong><br/>
 Open an <a href="https://github.com/hsuyelin/iptv-web/issues">Issue</a> on GitHub.<br/>
-
-<strong>Want to contribute?</strong><br/>
-Read <a href="#development">Development</a>, then open a pull request. Commits follow <a href="https://www.conventionalcommits.org">Conventional Commits</a>.<br/>
 
 <strong>Questions or ideas?</strong><br/>
 Join the community on <a href="http://t.me/iptvorganization">Telegram</a>.<br/>
 
 ---
 
-## Development
+## Settings
 
-### Prerequisites
-
-- Node.js 20 or newer
-- [just](https://github.com/casey/just)
-- A running [iptv-rs](https://github.com/hsuyelin/iptv-rs) relay, by default on `http://127.0.0.1:8787`
-
-### Cloning the Repository
-
-```bash
-git clone https://github.com/hsuyelin/iptv-web.git
-cd iptv-web
-npm ci
-```
-
-### Running the Console
-
-```bash
-npm run dev
-```
-
-The dev server proxies the relay routes to `VITE_DEV_RELAY` (default `http://127.0.0.1:8787`).
-
-### Building
-
-```bash
-npm run build
-```
-
-Set `VITE_RELAY_URL=https://relay.example.com` to host the console apart from the relay. Leave it unset when both share an origin.
-
-### Verifying Changes
-
-```bash
-just all      # lint, typecheck, test, build, names
-just shots    # Playwright screenshots and layout checks
-```
+| Variable | Default | Meaning |
+|---|---|---|
+| `VITE_RELAY_URL` | unset | Relay address when the console is hosted apart from it; leave unset when both share an origin |
+| `VITE_DEV_RELAY` | `http://127.0.0.1:8787` | Relay that the development server proxies to |
 
 ## Acknowledgements
 
