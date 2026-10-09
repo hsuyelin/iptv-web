@@ -381,3 +381,15 @@
     height: 293px;
   }
 }
+
+/*
+ * Phones have no room for the playlist: it would cover most of a small screen, and the
+ * channel rows right below the player already pick a channel. A phone is a narrow screen,
+ * or a short touch screen (a phone held sideways). The same query hides the sidebar itself.
+ */
+@media (max-width: 640px), (hover: none) and (max-height: 500px) {
+  .playlistButton,
+  :global(.legacy) .playlistButton {
+    display: none;
+  }
+}

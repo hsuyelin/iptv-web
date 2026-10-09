@@ -172,3 +172,10 @@
   width: calc(100% - 68px);
   margin-left: var(--space-3);
 }
+
+/* See Player.module.css: the playlist is not offered on phones, open or not. */
+@media (max-width: 640px), (hover: none) and (max-height: 500px) {
+  .playlist {
+    display: none;
+  }
+}

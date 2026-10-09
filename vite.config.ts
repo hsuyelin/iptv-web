@@ -59,7 +59,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
-    target: 'es2022',
+    // No `target` here: the legacy plugin sets the modern bundle's own, from `modernTargets`.
     // terser, not the default oxc: oxc rewrites the legacy (ES5) chunks back into template
     // literals and arrow functions, which iOS 9 cannot parse.
     minify: 'terser',
@@ -67,6 +67,14 @@ export default defineConfig({
     // the standard forms: the default CSS target is a modern Safari, which makes the
     // minifier drop the prefixes (and, with Safari 9 alone, the standard forms).
     cssTarget: ['safari9', 'chrome90', 'firefox100', 'edge90'],
+    // hls.js (about 570 kB, 640 kB for old browsers) is already a chunk of its own, fetched only
+    // when a channel is first played and never on iOS 9, which plays HLS itself. Nothing
+    // loads at start-up because of it, so the 500 kB warning has nothing to say here.
+    chunkSizeWarningLimit: 700,
+    rolldownOptions: {
+      // Most of the build is the legacy bundle's Babel pass and terser, by design: say nothing.
+      checks: { pluginTimings: false },
+    },
   },
   test: {
     environment: 'jsdom',
