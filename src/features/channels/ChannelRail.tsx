@@ -1,7 +1,8 @@
 import { useId } from 'react'
 import type { Channel } from '../../api/types'
-import { groupChannels } from '../../lib/channels'
-import { formatCount } from '../../lib/format'
+import { SearchIcon } from '../../components/Icons'
+import { useI18n } from '../../i18n/locale'
+import { groupChannels, OTHER_GROUP } from '../../lib/channels'
 import styles from './ChannelRail.module.css'
 
 interface ChannelRailProps {
@@ -13,7 +14,7 @@ interface ChannelRailProps {
   onGroupChange: (group: string | null) => void
 }
 
-/** The filter box and the list of groups. */
+/** The filter box and the group chips. */
 export function ChannelRail({
   channels,
   filter,
@@ -21,24 +22,29 @@ export function ChannelRail({
   group,
   onGroupChange,
 }: ChannelRailProps) {
+  const { t, formatNumber } = useI18n()
   const filterId = useId()
   const groups = groupChannels(channels, '')
-
   return (
-    <aside className={styles.rail} aria-label="Find a channel">
-      <label htmlFor={filterId} className={styles.filterLabel}>
-        Filter by name
-      </label>
-      <input
-        id={filterId}
-        type="search"
-        className={styles.filter}
-        value={filter}
-        placeholder="Try “cctv”"
-        autoComplete="off"
-        onChange={(event) => onFilterChange(event.target.value)}
-      />
-      <nav aria-label="Groups">
+    <aside className={styles.rail} aria-label={t('find.region')}>
+      <div className={styles.search}>
+        <span className={styles.icon}>
+          <SearchIcon />
+        </span>
+        <label htmlFor={filterId} className={styles.filterLabel}>
+          {t('find.label')}
+        </label>
+        <input
+          id={filterId}
+          type="search"
+          className={styles.filter}
+          value={filter}
+          placeholder={t('find.placeholder')}
+          autoComplete="off"
+          onChange={(event) => onFilterChange(event.target.value)}
+        />
+      </div>
+      <nav className={styles.nav} aria-label={t('find.groups')}>
         <ul className={styles.groups}>
           <li>
             <button
@@ -47,8 +53,8 @@ export function ChannelRail({
               aria-pressed={group === null}
               onClick={() => onGroupChange(null)}
             >
-              All channels
-              <span className={styles.count}>{formatCount(channels.length)}</span>
+              {t('find.all')}
+              <span className={styles.count}>{formatNumber(channels.length)}</span>
             </button>
           </li>
           {groups.map((entry) => (
@@ -59,8 +65,8 @@ export function ChannelRail({
                 aria-pressed={group === entry.name}
                 onClick={() => onGroupChange(entry.name)}
               >
-                {entry.name}
-                <span className={styles.count}>{formatCount(entry.channels.length)}</span>
+                {entry.name === OTHER_GROUP ? t('find.other') : entry.name}
+                <span className={styles.count}>{formatNumber(entry.channels.length)}</span>
               </button>
             </li>
           ))}

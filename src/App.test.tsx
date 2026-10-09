@@ -125,21 +125,67 @@ describe('App', () => {
     expect(within(wall()).getAllByRole('button')).toHaveLength(4)
   })
 
-  it('switches between light and dark themes', async () => {
+  it('switches the whole interface between the three languages and remembers the choice', async () => {
     setup()
-    const toggle = await screen.findByRole('button', { name: /Use (dark|light) theme/ })
-    const before = toggle.textContent
+    await screen.findByRole('heading', { name: '央视' })
+    expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '简体中文' }))
+    expect(screen.getByLabelText('按名称筛选')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '其他' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('中继在线')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: '繁體中文' }))
+    expect(screen.getByLabelText('依名稱篩選')).toBeInTheDocument()
+    expect(screen.getByText('中繼在線')).toBeInTheDocument()
+    expect(screen.getByText('中繼在線').closest('[lang="zh-TW"]')).not.toBeNull()
+    expect(window.localStorage.getItem('iptv-web-locale')).toBe('zh-TW')
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('starts in the language the browser asks for', async () => {
+    window.localStorage.setItem('iptv-web-locale', 'zh-CN')
+    setup()
+    expect(await screen.findByLabelText('按名称筛选')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '简体中文' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('offers a senior mode that lists the channels in one large column', async () => {
+    setup()
+    await screen.findByRole('heading', { name: '央视' })
+    const toggle = screen.getByRole('button', { name: 'Senior mode' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(wall().closest('[data-senior]')).toHaveAttribute('data-senior', 'false')
+
     await userEvent.click(toggle)
-    expect(screen.getByRole('button', { name: /Use (dark|light) theme/ }).textContent).not.toBe(before)
+    expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveAttribute('aria-pressed', 'true')
+    expect(window.localStorage.getItem('iptv-web-senior')).toBe('on')
+    // Same channels, same buttons, now stacked as list lines with a plain on-air label.
+    expect(within(wall()).getAllByRole('button')).toHaveLength(4)
+    await userEvent.click(tile(/CCTV-1/))
+    expect(within(wall()).getByText('On air')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Senior mode' }))
+    expect(window.localStorage.getItem('iptv-web-senior')).toBe('off')
   })
 
   it('can be operated with the keyboard alone', async () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: theme toggle (header), filter, group buttons, then the tiles.
+    // Order: senior mode, the three languages, start, filter, group buttons, then the tiles.
     await user.tab()
-    expect(screen.getByRole('button', { name: /Use (dark|light) theme/ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '简体中文' })).toHaveFocus()
+    await user.tab()
+    await user.tab()
+    // Then the empty stage's start button, then the filter.
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Start watching' })).toHaveFocus()
     await user.tab()
     expect(screen.getByLabelText('Filter by name')).toHaveFocus()
     await user.tab()

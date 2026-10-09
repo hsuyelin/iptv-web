@@ -29,3 +29,9 @@ audit:
     npm audit --omit=dev
 
 all: lint typecheck test build names
+
+# Playwright layout check at phone, tablet and desktop sizes. Needs a relay serving the
+# built console: `BASE_URL=http://127.0.0.1:8787 just shots`. Screenshots go to e2e/shots/.
+shots:
+    npx playwright install chromium
+    npm run shots

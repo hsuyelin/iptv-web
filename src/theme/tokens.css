@@ -1,41 +1,60 @@
 /*
- * Design tokens. Colors are `light-dark(light, dark)` pairs, so one declaration covers
- * both schemes and follows the element's `color-scheme`.
- *
- * Palette: a control room. A cool gray wall, white panels, and one signal red, the tally
- * light that marks what is on air. Teal means healthy; amber means look at this.
+ * Design tokens. A cinema-dark console in the manner of a streaming service: a near-black
+ * page, one saturated red for what matters, white type, and translucent glass layers that
+ * let the artwork behind them show through.
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
-  --wall: light-dark(#e8ecf1, #0f1620);
-  --panel: light-dark(#ffffff, #18222f);
-  --panel-raised: light-dark(#f4f6f9, #1f2b3a);
-  --ink: light-dark(#17212e, #e7ecf3);
-  --ink-muted: light-dark(#4b5a6b, #a3b1c2);
-  --line: light-dark(#c9d2dc, #2c3a4b);
-  --line-strong: light-dark(#6b7a8b, #7a8da3);
+  --bg: #141414;
+  --surface: #1f1f1f;
+  --surface-raised: #2a2a2a;
+  --ink: #ffffff;
+  --ink-muted: #b8b8b8;
+  --line: rgba(255, 255, 255, 0.14);
+  --line-strong: #8c8c8c;
+  --accent: #b8444b;
+  --accent-hover: #a73a41;
+  --on-accent: #ffffff;
+  --accent-text: #f09aa0;
+  --ok: #46d369;
+  --caution: #f5b83d;
+  --screen: #000000;
+  --on-screen: #ffffff;
 
-  --tally: light-dark(#d42b3e, #ff5a6e);
-  --on-tally: light-dark(#ffffff, #1a0509);
-  --signal: light-dark(#096870, #3cc2cb);
-  --caution: light-dark(#8f5a0e, #e0a34a);
+  --glass: rgba(24, 24, 24, 0.62);
+  --glass-strong: rgba(20, 20, 20, 0.82);
+  --glass-line: rgba(255, 255, 255, 0.12);
+  --blur: blur(18px) saturate(1.4);
 
-  --screen: #05080c;
-  --on-screen: #e7ecf3;
-
-  --font: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, 'PingFang SC',
+  --font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Helvetica Neue', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --font-tc: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Helvetica Neue',
+    'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
 
+  --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
-  --text-xl: 1.375rem;
-  --text-2xl: 1.75rem;
+  --text-lg: 1.25rem;
+  --text-xl: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
+
+  /* Minimum sizes of buttons and fields; larger in senior mode. */
+  --control: 44px;
+  --control-sm: 36px;
 
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
-  --space-6: 32px;
+  --space-6: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* Side gutter shared by the bar, the stage and the rows. */
+  --gutter: clamp(16px, 4vw, 56px);
+  --page-max: 2000px;
 }

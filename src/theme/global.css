@@ -4,14 +4,23 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
   font-family: var(--font);
   font-size: var(--text-md);
   line-height: 1.5;
   color: var(--ink);
-  background: var(--wall);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:lang(zh-TW) {
+  font-family: var(--font-tc);
 }
 
 button,
@@ -20,8 +29,12 @@ input {
   color: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
 :focus-visible {
-  outline: 3px solid var(--signal);
+  outline: 3px solid var(--ink);
   outline-offset: 2px;
 }
 

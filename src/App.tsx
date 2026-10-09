@@ -3,10 +3,14 @@ import { useChannels, useHealth } from './api/queries'
 import type { Channel } from './api/types'
 import { ChannelRail } from './features/channels/ChannelRail'
 import { ChannelWall } from './features/channels/ChannelWall'
-import { HealthStrip } from './features/health/HealthStrip'
+import { RelayStats } from './features/health/RelayStats'
 import type { EngineFactory } from './features/player/playback/engine'
 import { Player } from './features/player/Player'
-import { useTheme } from './theme/useTheme'
+import { TopBar } from './features/shell/TopBar'
+import { useI18n } from './i18n/locale'
+import { useSenior } from './i18n/senior'
+import { groupChannels } from './lib/channels'
+import stageArt from './assets/stage.svg'
 import styles from './App.module.css'
 
 interface AppProps {
@@ -15,45 +19,50 @@ interface AppProps {
 }
 
 export function App({ engineFactory }: AppProps) {
+  const { locale, t } = useI18n()
+  const { senior } = useSenior()
   const channels = useChannels()
   const health = useHealth()
-  const { theme, toggle } = useTheme()
   const [filter, setFilter] = useState('')
   const [group, setGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<Channel | null>(null)
 
   const unavailable = health.data?.unavailable ?? []
   const isUnavailable = selected !== null && unavailable.includes(selected.slug.toLowerCase())
+  const first = channels.data ? groupChannels(channels.data, '')[0]?.channels[0] : undefined
 
   return (
-    <div className={styles.app} style={{ colorScheme: theme }}>
-      <HealthStrip
-        health={health.data}
-        failed={health.isError}
-        lastSeenMs={health.dataUpdatedAt}
-        themeLabel={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
-        onToggleTheme={toggle}
-      />
+    <div
+      className={styles.app}
+      lang={locale}
+      data-senior={senior}
+      style={{ '--stage-art': `url("${stageArt}")` } as React.CSSProperties}
+    >
+      <title>{t('app.title')}</title>
+      <TopBar health={health.data} failed={health.isError} lastSeenMs={health.dataUpdatedAt} />
       <main className={styles.main}>
-        <div className={styles.player}>
-          <Player
-            channel={selected}
-            unavailable={isUnavailable}
-            {...(engineFactory ? { factory: engineFactory } : {})}
-          />
-        </div>
-        {channels.isPending && <p className={styles.note}>Loading channels…</p>}
-        {channels.isError && (
-          <div className={styles.failure} role="alert">
-            <p>Cannot load the channel list. {channels.error.message}</p>
-            <button type="button" className={styles.retry} onClick={() => void channels.refetch()}>
-              Try again
-            </button>
-          </div>
-        )}
-        {channels.data && (
-          <>
-            <div className={styles.rail}>
+        <Player
+          channel={selected}
+          unavailable={isUnavailable}
+          {...(first ? { onStart: () => setSelected(first) } : {})}
+          {...(engineFactory ? { factory: engineFactory } : {})}
+        />
+        <div className={styles.content}>
+          {channels.isPending && <p className={styles.note}>{t('app.loadingChannels')}</p>}
+          {channels.isError && (
+            <div className={styles.failure} role="alert">
+              <p>{t('app.channelsFailed', { detail: channels.error.message })}</p>
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => void channels.refetch()}
+              >
+                {t('app.tryAgain')}
+              </button>
+            </div>
+          )}
+          {channels.data && (
+            <>
               <ChannelRail
                 channels={channels.data}
                 filter={filter}
@@ -61,8 +70,6 @@ export function App({ engineFactory }: AppProps) {
                 group={group}
                 onGroupChange={setGroup}
               />
-            </div>
-            <div className={styles.wall}>
               <ChannelWall
                 channels={channels.data}
                 filter={filter}
@@ -74,10 +81,12 @@ export function App({ engineFactory }: AppProps) {
                   setGroup(null)
                 }}
                 unavailable={unavailable}
+                layout={senior ? 'list' : 'rows'}
               />
-            </div>
-          </>
-        )}
+            </>
+          )}
+          <RelayStats health={health.data} stale={health.isError} />
+        </div>
       </main>
     </div>
   )
