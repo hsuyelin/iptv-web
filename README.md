@@ -2,6 +2,7 @@
 <img alt="iptv-web" src="branding/banner.svg" width="560"/>
 <br/>
 <br/>
+<a href="https://github.com/hsuyelin/iptv-web/actions/workflows/ci.yaml"><img alt="CI" src="https://github.com/hsuyelin/iptv-web/actions/workflows/ci.yaml/badge.svg"/></a>
 <a href="https://github.com/hsuyelin/iptv-web/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hsuyelin/iptv-web.svg"/></a>
 <a href="https://github.com/hsuyelin/iptv-web/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/hsuyelin/iptv-web.svg"/></a>
 <br/>
