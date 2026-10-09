@@ -4,6 +4,7 @@ import { livePlaylistUrl } from '../../api/client'
 import { ArrowUpIcon, CloseIcon, ListIcon, PlayIcon } from '../../components/Icons'
 import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
+import type { MessageKey } from '../../i18n/messages'
 import type { EngineFactory } from './playback/engine'
 import { useHlsPlayback } from './playback/useHlsPlayback'
 import { Playlist } from './Playlist'
@@ -21,7 +22,23 @@ interface PlayerProps {
   onStart?: () => void
   /** Stops the stream and clears the selection; used by the floating window's close. */
   onClose?: () => void
+  /** What the empty stage says: waiting for the list, an empty list, or idle. */
+  status?: StageStatus
+  /** Asks for the channel list again; offered when the list is empty. */
+  onRefresh?: () => void
   factory?: EngineFactory
+}
+
+export type StageStatus = 'idle' | 'loading' | 'none'
+
+const STAGE_TITLE: Record<Exclude<StageStatus, 'loading'>, MessageKey> = {
+  idle: 'player.emptyTitle',
+  none: 'player.noneTitle',
+}
+
+const STAGE_TEXT: Record<Exclude<StageStatus, 'loading'>, MessageKey> = {
+  idle: 'player.emptyText',
+  none: 'player.noneText',
 }
 
 /** The stage: artwork behind a rounded screen, with a playlist of every channel on it. */
@@ -32,6 +49,8 @@ export function Player({
   unavailable,
   onStart,
   onClose,
+  status = 'idle',
+  onRefresh,
   factory,
 }: PlayerProps) {
   const { t } = useI18n()
@@ -43,16 +62,30 @@ export function Player({
     return (
       <section className={styles.stage} aria-label={t('player.label')}>
         <div className={styles.frame}>
-          <div className={`${styles.screen} ${styles.empty}`}>
-            <p className={styles.emptyTitle}>{t('player.emptyTitle')}</p>
-            <p className={styles.emptyText}>{t('player.emptyText')}</p>
-            {onStart && (
-              <button type="button" className={styles.start} onClick={onStart}>
-                <PlayIcon />
-                {t('player.start')}
-              </button>
-            )}
-          </div>
+          {status === 'loading' ? (
+            // A grey screen with a soft shimmer, the size of the real one, so nothing jumps.
+            <div
+              className={`${styles.screen} ${styles.empty} ${styles.skeleton}`}
+              role="status"
+              aria-label={t('app.loadingChannels')}
+            />
+          ) : (
+            <div className={`${styles.screen} ${styles.empty}`}>
+              <p className={styles.emptyTitle}>{t(STAGE_TITLE[status])}</p>
+              <p className={styles.emptyText}>{t(STAGE_TEXT[status])}</p>
+              {status === 'idle' && onStart && (
+                <button type="button" className={styles.start} onClick={onStart}>
+                  <PlayIcon />
+                  {t('player.start')}
+                </button>
+              )}
+              {status === 'none' && onRefresh && (
+                <button type="button" className={styles.start} onClick={onRefresh}>
+                  {t('app.tryAgain')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </section>
     )

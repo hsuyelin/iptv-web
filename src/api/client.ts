@@ -123,13 +123,31 @@ export async function fetchHealth(signal?: AbortSignal): Promise<RelayHealth> {
 /** What the relay said about an administrator key. */
 export type AdminVerdict = 'granted' | 'denied' | 'locked' | 'error'
 
+export interface AdminCheck {
+  readonly verdict: AdminVerdict
+  /** For a `locked` verdict: seconds until checks resume, when the relay said. */
+  readonly retryAfterSecs: number | null
+}
+
+const seconds = (value: unknown): number | null => {
+  const parsed = typeof value === 'string' ? Number(value) : value
+  return typeof parsed === 'number' && Number.isFinite(parsed) && parsed >= 0
+    ? Math.ceil(parsed)
+    : null
+}
+
 /**
  * Asks the relay whether `key` is the administrator key. The key travels in the request
  * body, never in a query string. A wrong key is `denied`; too many wrong ones from this
- * client is `locked`; anything unexpected, including a network failure, is `error`.
+ * client is `locked`, with the wait the relay reported; anything unexpected, including a
+ * network failure, is `error`.
  */
-export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise<AdminVerdict> {
+export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise<AdminCheck> {
   const timeout = AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+  const outcome = (verdict: AdminVerdict, retryAfterSecs: number | null = null): AdminCheck => ({
+    verdict,
+    retryAfterSecs,
+  })
   try {
     const response = await fetch(relayUrl('/admin/verify'), {
       method: 'POST',
@@ -137,12 +155,19 @@ export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise
       body: JSON.stringify({ key }),
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     })
-    if (response.status === 429) return 'locked'
-    if (response.status === 403) return 'denied'
-    if (!response.ok) return 'error'
+    if (response.status === 429) {
+      const body: unknown = await response.json().catch(() => null)
+      return outcome(
+        'locked',
+        seconds(response.headers.get('retry-after')) ??
+          (isRecord(body) ? seconds(body['retry_after']) : null),
+      )
+    }
+    if (response.status === 403) return outcome('denied')
+    if (!response.ok) return outcome('error')
     const body: unknown = await response.json()
-    return isRecord(body) && body['ok'] === true ? 'granted' : 'denied'
+    return outcome(isRecord(body) && body['ok'] === true ? 'granted' : 'denied')
   } catch {
-    return 'error'
+    return outcome('error')
   }
 }

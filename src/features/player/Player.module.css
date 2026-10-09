@@ -105,6 +105,27 @@
   -webkit-backdrop-filter: var(--blur);
 }
 
+/* Placeholder while the channel list loads: same box as the screen, a slow shimmer on it. */
+.skeleton {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.04) 70%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
 .emptyTitle {
   margin: 0;
   font-size: var(--text-xl);

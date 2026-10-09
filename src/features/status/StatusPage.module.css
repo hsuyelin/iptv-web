@@ -1,0 +1,150 @@
+/* Fills what is left under the bar and sets one glass panel in the middle of the stage. */
+.page {
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - 72px);
+  padding: var(--space-6) var(--gutter);
+  background:
+    linear-gradient(to bottom, rgba(20, 20, 20, 0.25), var(--bg) 96%),
+    var(--stage-art) center top / cover no-repeat;
+}
+
+.panel {
+  --tone: var(--ink-muted);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(100%, 560px);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.panel[data-tone='warn'] {
+  --tone: var(--caution);
+}
+
+.panel[data-tone='alert'] {
+  --tone: var(--accent-text);
+}
+
+.card {
+  width: 96px;
+  height: auto;
+  margin-bottom: var(--space-2);
+  /* Faded, as a screen that has lost its signal. */
+  opacity: 0.55;
+  filter: saturate(0.7);
+}
+
+.frame {
+  fill: #0d0d0d;
+  stroke: var(--tone);
+  stroke-width: 2;
+}
+
+.strip {
+  fill: var(--tone);
+  opacity: 0.8;
+}
+
+.code {
+  margin: 0;
+  font-size: clamp(3.5rem, 2.5rem + 5vw, 6rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--tone);
+  background: linear-gradient(180deg, var(--ink), var(--tone) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.text {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--ink-muted);
+}
+
+.detail {
+  margin: 0;
+  max-width: 42ch;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* The same red button the player uses; links and buttons share it. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control);
+  padding: 0 var(--space-5);
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.action:hover {
+  background: var(--accent-hover);
+}
+
+.quiet {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--glass-line);
+}
+
+.quiet:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.countdown {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--tone);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--space-5) var(--space-4);
+  }
+}

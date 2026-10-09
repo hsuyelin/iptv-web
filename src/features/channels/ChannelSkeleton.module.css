@@ -1,0 +1,76 @@
+.wall {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.group {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.title,
+.tile,
+.line {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 70%
+  );
+  background-size: 300% 100%;
+  border: 1px solid var(--glass-line);
+  animation: shimmer 1.6s linear infinite;
+}
+
+.title {
+  width: 6ch;
+  height: var(--text-lg);
+  border-radius: var(--radius-sm);
+}
+
+/* The same card widths as the real rows. */
+.tiles {
+  --card-width: clamp(148px, 44vw, 168px);
+  display: flex;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .tiles {
+    --card-width: clamp(190px, 26vw, 230px);
+  }
+}
+
+@media (min-width: 1100px) {
+  .tiles {
+    --card-width: clamp(220px, 17vw, 270px);
+  }
+}
+
+.tile {
+  flex: 0 0 var(--card-width);
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.line {
+  min-height: calc(var(--control) * 1.8);
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}

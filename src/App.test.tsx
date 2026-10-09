@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type { EngineFactory } from './features/player/playback/engine'
@@ -72,20 +72,33 @@ describe('App', () => {
     expect(tile('Channel 60')).toBeInTheDocument()
   })
 
-  it('starts playback when a channel is chosen and swaps streams on the next choice', async () => {
-    const { loads, destroyed } = setup()
+  it('opens on the first channel without a click', async () => {
+    const { loads } = setup()
     await screen.findByRole('heading', { name: '央视' })
-    expect(screen.getByText(/pick a channel/i)).toBeInTheDocument()
-
-    await userEvent.click(tile(/CCTV-1/))
     expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`])
     expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('CCTV-1 综合 live stream')).toBeInTheDocument()
+    expect(screen.queryByText(/pick a channel/i)).not.toBeInTheDocument()
+  })
+
+  it('swaps streams when another channel is chosen', async () => {
+    const { loads, destroyed } = setup()
+    await screen.findByRole('heading', { name: '央视' })
 
     await userEvent.click(tile(/CCTV-2/))
     expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
     expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`, `${RELAY}/live/cctv2.m3u8`])
+    expect(tile(/CCTV-2/)).toHaveAttribute('aria-pressed', 'true')
     expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByLabelText('CCTV-2 财经 live stream')).toBeInTheDocument()
+  })
+
+  it('plays nothing, and stays idle, when there are no channels', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(0))))
+    const { loads } = setup()
+    expect(await screen.findByText('No channels yet')).toBeInTheDocument()
+    expect(loads).toEqual([])
+    expect(screen.queryByRole('button', { name: 'Start watching' })).not.toBeInTheDocument()
   })
 
   it('warns when the relay is redirecting the selected channel to its notice stream', async () => {
@@ -102,13 +115,120 @@ describe('App', () => {
     expect(tile(/CCTV-2/)).toHaveAttribute('data-unavailable', 'false')
   })
 
-  it('reports a failed channel list and recovers on retry', async () => {
+  it('shows the 503 page, with the reason, when the channel list cannot be had, and recovers on retry', async () => {
     server.use(http.get(`${RELAY}/channels`, () => new HttpResponse(null, { status: 503 })))
     setup()
-    expect(await screen.findByText(/Cannot load the channel list/)).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Service unavailable')
+    expect(screen.getByText('503')).toBeInTheDocument()
+    expect(screen.getByText(/Cannot load the channel list/)).toBeInTheDocument()
+    // The page around it stays: the bar still says the relay is out of reach.
+    expect(screen.getByRole('heading', { name: 'IPTV' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/pick a channel/i)).not.toBeInTheDocument()
+
     server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(channelsPayload)))
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: '央视' })).toBeInTheDocument()
+    expect(screen.queryByText('Service unavailable')).not.toBeInTheDocument()
+    // The recovered list opens on its first channel, like a normal load.
+    expect(await screen.findByLabelText('CCTV-1 综合 live stream')).toBeInTheDocument()
+  })
+
+  it('shows the 503 page when the relay cannot be reached at all', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.error()))
+    setup()
+    expect(await screen.findByText('Service unavailable')).toBeInTheDocument()
+  })
+
+  it('shows the 404 page for a hash that matches no page, and leaves it behind a link', async () => {
+    window.location.hash = '#/nope'
+    setup()
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(screen.getByText('404')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+    expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
+    expect(screen.getByRole('link', { name: 'Back to the channels' })).toHaveAttribute('href', '/')
+    window.location.hash = ''
+  })
+
+  it('follows the address bar into and out of the 404 page', async () => {
+    setup()
+    await screen.findByRole('heading', { name: '央视' })
+    act(() => {
+      window.location.hash = '#/missing'
+    })
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    act(() => {
+      window.location.hash = '#/'
+    })
+    expect(await screen.findByRole('heading', { name: '央视' })).toBeInTheDocument()
+    window.location.hash = ''
+  })
+
+  it('shows the 404 page for a deep path or a file name, without asking about a key', async () => {
+    let asked = 0
+    server.use(
+      http.post(`${RELAY}/admin/verify`, () => {
+        asked += 1
+        return HttpResponse.json({ ok: false }, { status: 403 })
+      }),
+    )
+    window.history.pushState({}, '', '/a/b')
+    const { loads } = setup()
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(asked).toBe(0)
+    expect(loads).toEqual([])
+  })
+
+  it('shows skeletons, not a misleading prompt, while the channel list loads', async () => {
+    server.use(http.get(`${RELAY}/channels`, async () => {
+      await delay('infinite')
+      return HttpResponse.json(channelsPayload)
+    }))
+    setup()
+    expect(await screen.findByRole('status', { name: 'Loading channels…' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Loading channels…' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText(/pick a channel/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start watching' })).not.toBeInTheDocument()
+  })
+
+  it('shows skeleton lines in senior mode while the list loads', async () => {
+    window.localStorage.setItem('iptv-web-senior', 'on')
+    server.use(http.get(`${RELAY}/channels`, async () => {
+      await delay('infinite')
+      return HttpResponse.json(channelsPayload)
+    }))
+    setup()
+    expect(await screen.findByRole('region', { name: 'Loading channels…' })).toBeInTheDocument()
+  })
+
+  it('explains an empty channel list and offers to check again', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(0))))
+    setup()
+    expect(await screen.findByText('No channels yet')).toBeInTheDocument()
+    expect(screen.getByText(/channels\.yaml/)).toBeInTheDocument()
+    expect(screen.queryByText(/pick a channel/i)).not.toBeInTheDocument()
+    // No empty wall and no loading placeholder are left behind.
+    expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Loading channels…' })).not.toBeInTheDocument()
+
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(channelsPayload)))
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { name: '央视' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('CCTV-1 综合 live stream')).toBeInTheDocument()
+  })
+
+  it('keeps the opening channel when the list is reloaded in another order', async () => {
+    const { queryClient, loads, destroyed } = setup()
+    await screen.findByRole('heading', { name: '央视' })
+    expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`])
+
+    const reordered = { ...channelsPayload, channels: [...channelsPayload.channels].reverse() }
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(reordered)))
+    await act(() => queryClient.invalidateQueries({ queryKey: ['channels'] }))
+    await waitFor(() => expect(screen.getAllByRole('heading', { level: 2 })[0]).not.toHaveTextContent('央视'))
+    expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`])
+    expect(destroyed).toEqual([])
   })
 
   it('keeps the channel list and shows the offline state when the relay stops answering', async () => {
@@ -213,22 +333,22 @@ describe('App', () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: senior mode, the language menu, start, then the tiles.
+    // Order: senior mode, the language menu, the playlist button, then the tiles.
     // A standard visitor has no page tabs to stop at.
     await user.tab()
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: /^Language: / })).toHaveFocus()
     await user.tab()
-    expect(screen.getByRole('button', { name: 'Start watching' })).toHaveFocus()
-    const tile = screen.getByRole('button', { name: /CCTV-1/ })
+    expect(screen.getByRole('button', { name: 'Playlist' })).toHaveFocus()
+    const tile = screen.getByRole('button', { name: /CCTV-2/ })
     for (let stops = 0; stops < 10 && document.activeElement !== tile; stops += 1) {
       await user.tab()
     }
     expect(tile).toHaveFocus()
     await user.keyboard('{Enter}')
-    expect(screen.getByRole('button', { name: /CCTV-1/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText(/CCTV-1 综合 live stream/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /CCTV-2/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText(/CCTV-2 财经 live stream/)).toBeInTheDocument()
   })
 
   describe('playlist', () => {
@@ -237,11 +357,9 @@ describe('App', () => {
       return screen.getByRole('complementary', { name: 'Playlist' })
     }
 
-    it('is offered only once something is playing', async () => {
+    it('is offered on the channel the page opens with, closed at first', async () => {
       setup()
       await screen.findByRole('heading', { name: '央视' })
-      expect(screen.queryByRole('button', { name: 'Playlist' })).not.toBeInTheDocument()
-      await userEvent.click(tile(/CCTV-1/))
       expect(screen.getByRole('button', { name: 'Playlist' })).toHaveAttribute('aria-expanded', 'false')
       expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
     })
@@ -316,9 +434,10 @@ describe('App', () => {
       expect(loads).toHaveLength(1)
     })
 
-    it('never floats before something is playing', async () => {
+    it('never floats when nothing is playing', async () => {
+      server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(0))))
       setup()
-      await screen.findByRole('heading', { name: '央视' })
+      await screen.findByText('No channels yet')
       expect(screen.queryByRole('group', { name: 'Floating player' })).not.toBeInTheDocument()
       expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
     })
@@ -359,6 +478,10 @@ describe('App', () => {
       expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
       expect(screen.getByText('Nothing on air')).toBeInTheDocument()
       expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'false')
+      // Closing is a choice: the first channel does not start again by itself.
+      expect(screen.getByRole('button', { name: 'Start watching' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Start watching' }))
+      expect(screen.getByLabelText(/CCTV-1 综合 live stream/)).toBeInTheDocument()
     })
   })
 
@@ -480,26 +603,74 @@ describe('App', () => {
       expect(screen.getByRole('link', { name: 'Channels' })).toHaveAttribute('aria-current', 'page')
     })
 
-    it.each([
-      ['a wrong key', 403],
-      ['a locked-out client', 429],
-      ['a relay that errors', 500],
-    ])('stays a standard visit for %s', async (_name, status) => {
+    it('shows the 403 page for a wrong key, and starts nothing behind it', async () => {
       let asked = 0
       server.use(
         http.post(`${RELAY}/admin/verify`, () => {
           asked += 1
-          return HttpResponse.json({ ok: false }, { status })
+          return HttpResponse.json({ ok: false }, { status: 403 })
         }),
       )
       window.history.pushState({}, '', '/some-key-that-is-wrong')
-      setup()
-      await screen.findByRole('heading', { name: '央视' })
-      await waitFor(() => expect(asked).toBe(1))
+      const { loads } = setup()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Access denied')
+      expect(screen.getByText('403')).toBeInTheDocument()
+      // Nothing of the console runs behind it, and the key is not repeated back.
+      expect(loads).toEqual([])
+      expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+      expect(document.body.textContent).not.toContain('some-key-that-is-wrong')
       expect(tabs()).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Back to the channels' })).toHaveAttribute('href', '/')
       // One try per visit: a refused key is not asked about again.
       await new Promise((done) => setTimeout(done, 50))
       expect(asked).toBe(1)
+    })
+
+    it('shows the 429 page with the wait the relay reported for a locked-out client', async () => {
+      server.use(
+        http.post(`${RELAY}/admin/verify`, () =>
+          HttpResponse.json({ ok: false, retry_after: 900 }, { status: 429, headers: { 'retry-after': '900' } }),
+        ),
+      )
+      window.history.pushState({}, '', '/some-key-that-is-wrong')
+      const { loads } = setup()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts')
+      expect(screen.getByText('429')).toBeInTheDocument()
+      expect(screen.getByText('Try again in 15:00')).toBeInTheDocument()
+      expect(loads).toEqual([])
+      expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+    })
+
+    it('stays a standard visit when the relay errors, since the page reports an unreachable relay', async () => {
+      server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json({ ok: false }, { status: 500 })))
+      window.history.pushState({}, '', '/some-key-that-is-wrong')
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(tabs()).not.toBeInTheDocument()
+      expect(screen.queryByText('Access denied')).not.toBeInTheDocument()
+    })
+
+    it('holds the console back, as skeletons, until the relay has ruled on the key', async () => {
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((open) => {
+        release = open
+      })
+      server.use(
+        http.post(`${RELAY}/admin/verify`, async () => {
+          await gate
+          return HttpResponse.json({ ok: true })
+        }),
+      )
+      window.history.pushState({}, '', `/${ADMIN_KEY}`)
+      const { loads } = setup()
+      expect(await screen.findByRole('region', { name: 'Loading channels…' })).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+      expect(loads).toEqual([])
+
+      release()
+      expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+      expect(await screen.findByLabelText('CCTV-1 综合 live stream')).toBeInTheDocument()
+      expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`])
     })
 
     it('sends the key in the request body, not in the address of the call', async () => {
@@ -516,7 +687,7 @@ describe('App', () => {
       expect(seen).toEqual({ url: `${RELAY}/admin/verify`, body: { key: ADMIN_KEY } })
     })
 
-    it('does not ask the relay at all for the plain address or a deep path', async () => {
+    it('does not ask the relay at all for the plain address', async () => {
       let asked = 0
       server.use(
         http.post(`${RELAY}/admin/verify`, () => {
@@ -524,7 +695,6 @@ describe('App', () => {
           return HttpResponse.json({ ok: false }, { status: 403 })
         }),
       )
-      window.history.pushState({}, '', '/a/b')
       setup()
       await screen.findByRole('heading', { name: '央视' })
       expect(asked).toBe(0)

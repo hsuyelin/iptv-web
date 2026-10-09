@@ -103,24 +103,38 @@ describe('fetching', () => {
 })
 
 describe('verifyAdminKey', () => {
-  const answer = (status: number, body: Record<string, unknown> = { ok: status === 200 }) =>
-    server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json(body, { status })))
+  const answer = (
+    status: number,
+    body: Record<string, unknown> = { ok: status === 200 },
+    headers: Record<string, string> = {},
+  ) => server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json(body, { status, headers })))
 
   it('maps the relay answers to a verdict', async () => {
     answer(200)
-    expect(await verifyAdminKey('k')).toBe('granted')
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'granted', retryAfterSecs: null })
     answer(403)
-    expect(await verifyAdminKey('k')).toBe('denied')
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'denied', retryAfterSecs: null })
     answer(429, { ok: false, retry_after: 900 })
-    expect(await verifyAdminKey('k')).toBe('locked')
+    expect((await verifyAdminKey('k')).verdict).toBe('locked')
     answer(500)
-    expect(await verifyAdminKey('k')).toBe('error')
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'error', retryAfterSecs: null })
     answer(200, { ok: false })
-    expect(await verifyAdminKey('k')).toBe('denied')
+    expect((await verifyAdminKey('k')).verdict).toBe('denied')
+  })
+
+  it('reports how long a lock lasts: the header first, then the body, else unknown', async () => {
+    answer(429, { ok: false, retry_after: 900 }, { 'retry-after': '120' })
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'locked', retryAfterSecs: 120 })
+    answer(429, { ok: false, retry_after: 900 })
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'locked', retryAfterSecs: 900 })
+    answer(429, { ok: false })
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'locked', retryAfterSecs: null })
+    answer(429, { ok: false, retry_after: -5 })
+    expect((await verifyAdminKey('k')).retryAfterSecs).toBeNull()
   })
 
   it('reports a network failure as an error, never as access', async () => {
     server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.error()))
-    expect(await verifyAdminKey('k')).toBe('error')
+    expect(await verifyAdminKey('k')).toEqual({ verdict: 'error', retryAfterSecs: null })
   })
 })

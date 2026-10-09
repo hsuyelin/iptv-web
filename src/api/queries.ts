@@ -74,14 +74,24 @@ export function adminCandidate(pathname: string): string | null {
   }
 }
 
+export type AdminStatus = 'none' | 'checking' | 'granted' | 'denied' | 'locked'
+
+export interface AdminState {
+  readonly status: AdminStatus
+  /** While `locked`: seconds until checks resume, when the relay said. */
+  readonly retryAfterSecs: number | null
+}
+
 /**
- * Whether this visit is in administrator mode: the address carries a key the relay
- * accepts. Nothing is stored; opening the console without the key is a normal visit.
- * One check is made per visit, and a refused or locked key is never retried.
+ * How this visit stands with the administrator key. An address without a key is `none`, a
+ * normal visit. An address that carries one is `checking` until the relay answers, then
+ * `granted`, `denied` (wrong key) or `locked` (too many wrong keys). A relay that cannot
+ * answer counts as `none`, since the page itself reports an unreachable relay. Nothing is
+ * stored; one check is made per visit, and a refused or locked key is never retried.
  */
-export function useAdmin(): boolean {
+export function useAdmin(): AdminState {
   const candidate = adminCandidate(window.location.pathname)
-  const verdict = useQuery({
+  const check = useQuery({
     queryKey: ['admin', candidate],
     queryFn: ({ signal }) => verifyAdminKey(candidate ?? '', signal),
     enabled: candidate !== null,
@@ -90,5 +100,13 @@ export function useAdmin(): boolean {
     refetchOnMount: false,
     refetchOnReconnect: false,
   })
-  return verdict.data === 'granted'
+  if (candidate === null) return { status: 'none', retryAfterSecs: null }
+  if (!check.data) {
+    return { status: check.isError ? 'none' : 'checking', retryAfterSecs: null }
+  }
+  const { verdict, retryAfterSecs } = check.data
+  return {
+    status: verdict === 'error' ? 'none' : verdict,
+    retryAfterSecs: verdict === 'locked' ? retryAfterSecs : null,
+  }
 }
