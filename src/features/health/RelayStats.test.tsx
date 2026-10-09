@@ -45,13 +45,31 @@ describe('RelayStats', () => {
 
 describe('TopBar status', () => {
   it('reports checking, online and unreachable states', () => {
-    const { rerender } = render(<TopBar health={undefined} failed={false} lastSeenMs={0} route="channels" />)
-    expect(screen.getByRole('status')).toHaveTextContent('Checking the relay…')
-    rerender(<TopBar health={health} failed={false} lastSeenMs={1} route="channels" />)
-    expect(screen.getByRole('status')).toHaveTextContent('Relay online')
-    rerender(<TopBar health={undefined} failed lastSeenMs={0} route="channels" />)
-    expect(screen.getByRole('status')).toHaveTextContent('Relay unreachable')
-    rerender(<TopBar health={health} failed lastSeenMs={Date.UTC(2026, 0, 1, 12, 34, 56)} route="channels" />)
-    expect(screen.getByRole('status')).toHaveTextContent(/Relay unreachable, last seen/)
+    const { rerender } = render(<TopBar health={undefined} failed={false} lastSeenMs={0} route="channels" admin={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Checking')
+    rerender(<TopBar health={health} failed={false} lastSeenMs={1} route="channels" admin={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Online')
+    rerender(<TopBar health={undefined} failed lastSeenMs={0} route="channels" admin={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Offline')
+    rerender(<TopBar health={health} failed lastSeenMs={Date.UTC(2026, 0, 1, 12, 34, 56)} route="channels" admin={false} />)
+    // One word and a dot on screen; the full sentence is the accessible name.
+    expect(screen.getByRole('status')).toHaveTextContent(/^Offline$/)
+    expect(screen.getByRole('status')).toHaveAccessibleName(/Offline, last seen \d\d:\d\d:\d\d/)
+  })
+
+  it('shows the page tabs only in administrator mode, without moving anything else', () => {
+    const standard = render(<TopBar health={health} failed={false} lastSeenMs={1} route="channels" admin={false} />)
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Channels' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument()
+    // The brand, the status and the controls are still there.
+    expect(screen.getByRole('heading', { name: 'IPTV' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Senior mode' })).toBeInTheDocument()
+    standard.unmount()
+
+    render(<TopBar health={health} failed={false} lastSeenMs={1} route="dashboard" admin />)
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Channels' })).not.toHaveAttribute('aria-current')
   })
 })

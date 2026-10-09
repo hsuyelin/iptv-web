@@ -1,5 +1,5 @@
 import { QueryClient, useQuery } from '@tanstack/react-query'
-import { fetchChannels, fetchHealth } from './client'
+import { fetchChannels, fetchHealth, verifyAdminKey } from './client'
 import type { HealthSample } from './types'
 
 export const HEALTH_INTERVAL_MS = 5000
@@ -58,4 +58,37 @@ export function useHealthHistory(): readonly HealthSample[] {
     staleTime: Infinity,
   })
   return history.data
+}
+
+/**
+ * The key carried by the page address, if any: `/<key>` gives `<key>`. Paths with more
+ * than one segment, or that look like files, carry none.
+ */
+export function adminCandidate(pathname: string): string | null {
+  const trimmed = pathname.replace(/^\/+|\/+$/g, '')
+  if (trimmed === '' || trimmed.includes('/') || trimmed.includes('.')) return null
+  try {
+    return decodeURIComponent(trimmed)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Whether this visit is in administrator mode: the address carries a key the relay
+ * accepts. Nothing is stored; opening the console without the key is a normal visit.
+ * One check is made per visit, and a refused or locked key is never retried.
+ */
+export function useAdmin(): boolean {
+  const candidate = adminCandidate(window.location.pathname)
+  const verdict = useQuery({
+    queryKey: ['admin', candidate],
+    queryFn: ({ signal }) => verifyAdminKey(candidate ?? '', signal),
+    enabled: candidate !== null,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  })
+  return verdict.data === 'granted'
 }

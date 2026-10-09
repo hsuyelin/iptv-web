@@ -28,10 +28,10 @@ const en = {
   'nav.channels': 'Channels',
   'nav.dashboard': 'Dashboard',
 
-  'status.online': 'Relay online',
-  'status.offline': 'Relay unreachable',
-  'status.offlineSince': 'Relay unreachable, last seen {time}',
-  'status.checking': 'Checking the relay…',
+  'status.online': 'Online',
+  'status.offline': 'Offline',
+  'status.offlineSince': 'Offline, last seen {time}',
+  'status.checking': 'Checking',
 
   'stats.title': 'Relay status',
   'stats.figures': 'Relay figures',
@@ -117,10 +117,10 @@ const zhCN: Messages = {
   'nav.channels': '频道',
   'nav.dashboard': '仪表盘',
 
-  'status.online': '中继在线',
-  'status.offline': '中继无法连接',
-  'status.offlineSince': '中继无法连接，上次在线 {time}',
-  'status.checking': '正在检查中继…',
+  'status.online': '在线',
+  'status.offline': '离线',
+  'status.offlineSince': '离线，上次在线 {time}',
+  'status.checking': '检测中',
 
   'stats.title': '中继状态',
   'stats.figures': '中继数据',
@@ -201,10 +201,10 @@ const zhTW: Messages = {
   'nav.channels': '頻道',
   'nav.dashboard': '儀表板',
 
-  'status.online': '中繼在線',
-  'status.offline': '中繼無法連線',
-  'status.offlineSince': '中繼無法連線，上次在線 {time}',
-  'status.checking': '正在檢查中繼…',
+  'status.online': '在線',
+  'status.offline': '離線',
+  'status.offlineSince': '離線，上次在線 {time}',
+  'status.checking': '檢測中',
 
   'stats.title': '中繼狀態',
   'stats.figures': '中繼資料',

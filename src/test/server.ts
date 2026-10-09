@@ -2,6 +2,8 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
 export const RELAY = 'http://relay.test'
+/** The administrator key the fake relay accepts. */
+export const ADMIN_KEY = 'test-admin-key-0123'
 
 export const channelsPayload = {
   ok: true,
@@ -52,4 +54,10 @@ export function healthPayload(overrides: Record<string, unknown> = {}) {
 export const server = setupServer(
   http.get(`${RELAY}/channels`, () => HttpResponse.json(channelsPayload)),
   http.get(`${RELAY}/health`, () => HttpResponse.json(healthPayload())),
+  http.post(`${RELAY}/admin/verify`, async ({ request }) => {
+    const body = (await request.json()) as { key?: string }
+    return body.key === ADMIN_KEY
+      ? HttpResponse.json({ ok: true })
+      : HttpResponse.json({ ok: false }, { status: 403 })
+  }),
 )

@@ -2,11 +2,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type { EngineFactory } from './features/player/playback/engine'
 import { setInView } from './test/setup'
-import { channelsPayload, healthPayload, manyChannelsPayload, RELAY, server } from './test/server'
+import {
+  ADMIN_KEY,
+  channelsPayload,
+  healthPayload,
+  manyChannelsPayload,
+  RELAY,
+  server,
+} from './test/server'
 
 function setup() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -43,7 +50,7 @@ describe('App', () => {
     expect(within(wall()).getAllByRole('button')).toHaveLength(4)
     // A channel without a name shows its slug.
     expect(tile('misc')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('Relay online')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Online' })).toBeInTheDocument())
   })
 
   it('filters by name or slug and hides groups that end up empty', async () => {
@@ -117,11 +124,11 @@ describe('App', () => {
   it('keeps the channel list and shows the offline state when the relay stops answering', async () => {
     const { queryClient } = setup()
     await screen.findByRole('heading', { name: '央视' })
-    await waitFor(() => expect(screen.getByText('Relay online')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Online' })).toBeInTheDocument())
 
     server.use(http.get(`${RELAY}/health`, () => HttpResponse.error()))
     await queryClient.refetchQueries({ queryKey: ['health'] })
-    expect(await screen.findByText(/Relay unreachable, last seen \d\d:\d\d:\d\d/)).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: /Offline, last seen \d\d:\d\d:\d\d/ })).toHaveTextContent('Offline')
     expect(within(wall()).getAllByRole('button')).toHaveLength(4)
   })
 
@@ -141,12 +148,12 @@ describe('App', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     expect(screen.getByLabelText('按名称筛选')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '其他' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('中继在线')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status', { name: '在线' })).toBeInTheDocument())
 
     await chooseLanguage('繁體中文')
     expect(screen.getByLabelText('依名稱篩選')).toBeInTheDocument()
-    expect(screen.getByText('中繼在線')).toBeInTheDocument()
-    expect(screen.getByText('中繼在線').closest('[lang="zh-TW"]')).not.toBeNull()
+    expect(screen.getByRole('status', { name: '在線' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '在線' }).closest('[lang="zh-TW"]')).not.toBeNull()
     expect(window.localStorage.getItem('iptv-web-locale')).toBe('zh-TW')
 
     await chooseLanguage('English')
@@ -216,11 +223,8 @@ describe('App', () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: page links, senior mode, the language menu, start, filter, group buttons, tiles.
-    await user.tab()
-    expect(screen.getByRole('link', { name: 'Channels' })).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveFocus()
+    // Order: senior mode, the language menu, start, filter, group buttons, then the tiles.
+    // A standard visitor has no page tabs to stop at.
     await user.tab()
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
     await user.tab()
@@ -415,6 +419,10 @@ describe('App', () => {
     afterEach(() => {
       window.location.hash = ''
     })
+    beforeEach(() => {
+      // The dashboard belongs to administrator mode: the address carries the key.
+      window.history.pushState({}, '', `/${ADMIN_KEY}`)
+    })
 
     it('links to the dashboard and back, following the address bar', async () => {
       setup()
@@ -443,7 +451,7 @@ describe('App', () => {
       window.location.hash = '#/dashboard'
       setup()
       expect(await screen.findByRole('heading', { name: 'Relay dashboard' })).toBeInTheDocument()
-      await waitFor(() => expect(screen.getAllByText('Relay online').length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByText('Online').length).toBeGreaterThan(0))
       expect(screen.getByText('Segments streamed', { selector: 'dt' }).nextSibling).toHaveTextContent('9')
       expect(screen.getByText('Uptime').nextSibling).toHaveTextContent(/3h 5m/)
       expect(screen.getByText('/app/channels.yaml')).toBeInTheDocument()
@@ -461,7 +469,89 @@ describe('App', () => {
       expect(screen.getByText('Collecting readings…')).toBeInTheDocument()
       server.use(http.get(`${RELAY}/health`, () => HttpResponse.error()))
       await queryClient.refetchQueries({ queryKey: ['health'] })
-      await waitFor(() => expect(screen.getAllByText('Relay unreachable').length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByText('Offline').length).toBeGreaterThan(0))
+    })
+  })
+
+  describe('administrator mode', () => {
+    const tabs = () => screen.queryByRole('navigation', { name: 'Main' })
+
+    it('hides every page tab from a standard visit and keeps the page whole', async () => {
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(tabs()).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Channels' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument()
+      // Everything else is where it should be.
+      expect(screen.getByRole('heading', { name: 'IPTV' })).toBeInTheDocument()
+      expect(screen.getByRole('status', { name: 'Online' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Senior mode' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Channels' })).toBeInTheDocument()
+    })
+
+    it('shows the tabs when the address carries the right key', async () => {
+      window.history.pushState({}, '', `/${ADMIN_KEY}`)
+      setup()
+      expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Channels' })).toHaveAttribute('aria-current', 'page')
+    })
+
+    it.each([
+      ['a wrong key', 403],
+      ['a locked-out client', 429],
+      ['a relay that errors', 500],
+    ])('stays a standard visit for %s', async (_name, status) => {
+      let asked = 0
+      server.use(
+        http.post(`${RELAY}/admin/verify`, () => {
+          asked += 1
+          return HttpResponse.json({ ok: false }, { status })
+        }),
+      )
+      window.history.pushState({}, '', '/some-key-that-is-wrong')
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await waitFor(() => expect(asked).toBe(1))
+      expect(tabs()).not.toBeInTheDocument()
+      // One try per visit: a refused key is not asked about again.
+      await new Promise((done) => setTimeout(done, 50))
+      expect(asked).toBe(1)
+    })
+
+    it('sends the key in the request body, not in the address of the call', async () => {
+      let seen: { url: string; body: unknown } | null = null
+      server.use(
+        http.post(`${RELAY}/admin/verify`, async ({ request }) => {
+          seen = { url: request.url, body: await request.json() }
+          return HttpResponse.json({ ok: true })
+        }),
+      )
+      window.history.pushState({}, '', `/${ADMIN_KEY}`)
+      setup()
+      await screen.findByRole('link', { name: 'Dashboard' })
+      expect(seen).toEqual({ url: `${RELAY}/admin/verify`, body: { key: ADMIN_KEY } })
+    })
+
+    it('does not ask the relay at all for the plain address or a deep path', async () => {
+      let asked = 0
+      server.use(
+        http.post(`${RELAY}/admin/verify`, () => {
+          asked += 1
+          return HttpResponse.json({ ok: false }, { status: 403 })
+        }),
+      )
+      window.history.pushState({}, '', '/a/b')
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(asked).toBe(0)
+    })
+
+    it('keeps a standard visitor on the channels even when the dashboard is asked for by hand', async () => {
+      window.location.hash = '#/dashboard'
+      setup()
+      expect(await screen.findByRole('heading', { name: '央视' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Relay dashboard' })).not.toBeInTheDocument()
+      window.location.hash = ''
     })
   })
 })

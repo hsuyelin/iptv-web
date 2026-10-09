@@ -42,6 +42,10 @@
 }
 
 @media (max-width: 520px) {
+  .globe {
+    display: none;
+  }
+
   .full {
     display: none;
   }

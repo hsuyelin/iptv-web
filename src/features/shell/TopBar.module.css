@@ -35,7 +35,12 @@
 .nav {
   display: flex;
   gap: var(--space-1);
-  margin-inline-end: auto;
+  min-width: 0;
+}
+
+/* Takes the free width, so the controls stay at the right whether or not there are tabs. */
+.spacer {
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -63,10 +68,6 @@
 
 /* Phones: the page links take their own row under the brand and controls. */
 @media (max-width: 640px) {
-  .brand {
-    margin-inline-end: auto;
-  }
-
   .nav {
     order: 5;
     flex: 1 0 100%;
@@ -114,22 +115,6 @@
   background: var(--accent);
 }
 
-/* On narrow screens only the dot stays; the text remains available to screen readers. */
-@media (max-width: 640px) {
-  .status {
-    padding: var(--space-2);
-  }
-
-  .statusText {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-}
-
 .senior {
   display: flex;
   align-items: center;
@@ -168,5 +153,16 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+}
+
+/* Narrow phones: tighter gaps keep brand, status and controls on one row. */
+@media (max-width: 520px) {
+  .bar {
+    gap: var(--space-2);
+  }
+
+  .status {
+    padding-inline: var(--space-2);
   }
 }

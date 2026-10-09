@@ -119,3 +119,30 @@ export async function fetchChannels(signal?: AbortSignal): Promise<Channel[]> {
 export async function fetchHealth(signal?: AbortSignal): Promise<RelayHealth> {
   return parseHealth(await fetchJson('/health', signal))
 }
+
+/** What the relay said about an administrator key. */
+export type AdminVerdict = 'granted' | 'denied' | 'locked' | 'error'
+
+/**
+ * Asks the relay whether `key` is the administrator key. The key travels in the request
+ * body, never in a query string. A wrong key is `denied`; too many wrong ones from this
+ * client is `locked`; anything unexpected, including a network failure, is `error`.
+ */
+export async function verifyAdminKey(key: string, signal?: AbortSignal): Promise<AdminVerdict> {
+  const timeout = AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+  try {
+    const response = await fetch(relayUrl('/admin/verify'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ key }),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    })
+    if (response.status === 429) return 'locked'
+    if (response.status === 403) return 'denied'
+    if (!response.ok) return 'error'
+    const body: unknown = await response.json()
+    return isRecord(body) && body['ok'] === true ? 'granted' : 'denied'
+  } catch {
+    return 'error'
+  }
+}

@@ -3,6 +3,7 @@
 // the topmost element at its own centre (so nothing is covered by something else).
 //
 //   BASE_URL=http://127.0.0.1:8787 node e2e/screenshots.mjs [outDir]
+//   ADMIN_KEY=<key the relay was started with> enables the administrator-mode scenarios.
 //   ONLY='phone.*/floating' limits the run to matching viewport/scenario names.
 //
 // The URL must serve the built console together with a running relay.
@@ -12,6 +13,7 @@ import { chromium } from 'playwright'
 
 const base = process.env.BASE_URL ?? 'http://127.0.0.1:8787'
 const out = process.argv[2] ?? 'e2e/shots'
+const adminKey = process.env.ADMIN_KEY ?? ''
 mkdirSync(out, { recursive: true })
 
 const viewports = [
@@ -34,6 +36,11 @@ const scenarios = [
   { name: 'dashboard-senior', locale: 'zh-CN', senior: true, play: false, hash: '#/dashboard', full: false },
   { name: 'menu', locale: 'zh-TW', senior: false, play: false, menu: true, full: false },
   { name: 'broken-images', locale: 'en', senior: false, play: false, blockImages: true, full: false },
+  // Standard visit (the plain address): no page tabs, controls at the right.
+  // Administrator visit (the key in the path): tabs appear, nothing else moves.
+  { name: 'admin', locale: 'en', senior: false, play: false, admin: true, full: false },
+  { name: 'admin-dashboard', locale: 'zh-CN', senior: false, play: false, admin: true, hash: '#/dashboard' },
+  { name: 'wrong-key', locale: 'en', senior: false, play: false, path: '/not-the-key-0000000000', full: false, only: ['phone'] },
   { name: 'page2', locale: 'en', senior: false, play: false, nextPage: true },
   { name: 'senior-page2', locale: 'zh-TW', senior: true, play: false, nextPage: true, full: false },
   // Playing, then scrolled until the player is out of view: the video floats.
@@ -107,6 +114,22 @@ function audit(allowFloatingOverlap) {
   }
 }
 
+const standardMetrics = new Map()
+
+/** Runs in the page: where the bar's parts are. */
+function headerMetrics() {
+  const header = document.querySelector('header')
+  const box = (el) => el.getBoundingClientRect()
+  const buttons = [...header.querySelectorAll('button')]
+  const last = buttons[buttons.length - 1]
+  return {
+    height: Math.round(box(header).height),
+    brandLeft: Math.round(box(header.querySelector('h1')).left),
+    controlsRight: Math.round(box(last).right),
+    tabs: header.querySelectorAll('nav a').length,
+  }
+}
+
 /** Runs in the page while the video should be floating. */
 function floatingChecks() {
   const problems = []
@@ -145,6 +168,8 @@ const only = process.env.ONLY ? new RegExp(process.env.ONLY) : null
 for (const viewport of viewports) {
   for (const scenario of scenarios) {
     if (only && !only.test(`${viewport.name}/${scenario.name}`)) continue
+    if (scenario.admin && adminKey === '') continue
+    if (scenario.only && !scenario.only.includes(viewport.name)) continue
     const context = await browser.newContext({
       viewport: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
@@ -160,11 +185,13 @@ for (const viewport of viewports) {
     )
     const page = await context.newPage()
     if (scenario.blockImages) await page.route(/\.(png|jpg|jpeg|webp|gif)(\?.*)?$/, (route) => route.abort())
-    await page.goto(base + (scenario.hash ?? ''), { waitUntil: 'networkidle' })
+    const path = scenario.admin ? `/${adminKey}` : (scenario.path ?? '')
+    await page.goto(base + path + (scenario.hash ?? ''), { waitUntil: 'networkidle' })
     await page.waitForSelector(
       scenario.hash ? 'main h2' : 'section[aria-label] button, [role="alert"]',
       { timeout: 15000 },
     )
+    if (scenario.admin) await page.waitForSelector('header nav', { timeout: 15000 })
     if (scenario.wait) await page.waitForTimeout(scenario.wait)
     if (scenario.menu) {
       await page.locator('header button[aria-haspopup="menu"]').click()
@@ -180,6 +207,27 @@ for (const viewport of viewports) {
     }
     if (!scenario.float) await page.evaluate(() => window.scrollTo(0, 0))
     const extra = []
+    const metrics = await page.evaluate(headerMetrics)
+    const tabsShown = metrics.tabs > 0
+    if (scenario.admin && !tabsShown) extra.push('administrator mode shows no tabs')
+    if (!scenario.admin && tabsShown) extra.push('a standard visit shows page tabs')
+    if (scenario.name === 'empty') standardMetrics.set(viewport.name, metrics)
+    if (scenario.name === 'admin') {
+      const standard = standardMetrics.get(viewport.name)
+      if (standard) {
+        // The controls must sit where they sit without tabs; on wide screens the bar
+        // must not grow either. (On phones the tabs take their own row, by design.)
+        if (Math.abs(standard.controlsRight - metrics.controlsRight) > 1) {
+          extra.push(`controls moved: ${standard.controlsRight} -> ${metrics.controlsRight}`)
+        }
+        if (Math.abs(standard.brandLeft - metrics.brandLeft) > 1) {
+          extra.push(`brand moved: ${standard.brandLeft} -> ${metrics.brandLeft}`)
+        }
+        if (viewport.width > 640 && Math.abs(standard.height - metrics.height) > 1) {
+          extra.push(`bar height changed: ${standard.height} -> ${metrics.height}`)
+        }
+      }
+    }
     if (scenario.menu) {
       const box = await page.locator('[role="menu"]').boundingBox()
       if (!box || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width) {

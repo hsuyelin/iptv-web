@@ -8,6 +8,7 @@ import {
   livePlaylistUrl,
   parseChannels,
   parseHealth,
+  verifyAdminKey,
   relayUrl,
 } from './client'
 
@@ -98,5 +99,28 @@ describe('fetching', () => {
   it('reports malformed JSON of the wrong shape', async () => {
     server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json({ ok: true, channels: 3 })))
     await expect(fetchChannels()).rejects.toMatchObject({ failure: 'shape' })
+  })
+})
+
+describe('verifyAdminKey', () => {
+  const answer = (status: number, body: Record<string, unknown> = { ok: status === 200 }) =>
+    server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.json(body, { status })))
+
+  it('maps the relay answers to a verdict', async () => {
+    answer(200)
+    expect(await verifyAdminKey('k')).toBe('granted')
+    answer(403)
+    expect(await verifyAdminKey('k')).toBe('denied')
+    answer(429, { ok: false, retry_after: 900 })
+    expect(await verifyAdminKey('k')).toBe('locked')
+    answer(500)
+    expect(await verifyAdminKey('k')).toBe('error')
+    answer(200, { ok: false })
+    expect(await verifyAdminKey('k')).toBe('denied')
+  })
+
+  it('reports a network failure as an error, never as access', async () => {
+    server.use(http.post(`${RELAY}/admin/verify`, () => HttpResponse.error()))
+    expect(await verifyAdminKey('k')).toBe('error')
   })
 })

@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 // to a locally running relay; in production the build is served by any static host (or
 // by the relay itself through --web-dir) and can point elsewhere with VITE_RELAY_URL.
 const relay = process.env['VITE_DEV_RELAY'] ?? 'http://127.0.0.1:8787'
-const relayRoutes = ['/channels', '/health', '/live', '/segment', '/list.m3u']
+const relayRoutes = ['/channels', '/health', '/live', '/segment', '/list.m3u', '/admin']
 
 export default defineConfig({
   plugins: [react()],

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useChannels, useHealth, useHealthHistory } from './api/queries'
+import { useAdmin, useChannels, useHealth, useHealthHistory } from './api/queries'
 import type { Channel } from './api/types'
 import { ChannelRail } from './features/channels/ChannelRail'
 import { ChannelWall } from './features/channels/ChannelWall'
@@ -29,7 +29,10 @@ export function App({ engineFactory }: AppProps) {
   const channels = useChannels()
   const health = useHealth()
   const history = useHealthHistory()
-  const route = useRoute()
+  const requested = useRoute()
+  const admin = useAdmin()
+  // The dashboard is for administrators; anyone else asking for it gets the channels.
+  const route = admin ? requested : 'channels'
   const [filter, setFilter] = useState('')
   const [group, setGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<Channel | null>(null)
@@ -54,6 +57,7 @@ export function App({ engineFactory }: AppProps) {
         failed={health.isError}
         lastSeenMs={health.dataUpdatedAt}
         route={route}
+        admin={admin}
       />
       {route === 'dashboard' ? (
         <main className={styles.main}>

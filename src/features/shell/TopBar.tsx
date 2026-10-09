@@ -12,19 +12,19 @@ interface TopBarProps {
   /** When the latest successful response arrived, in ms since the epoch (0 if never). */
   lastSeenMs: number
   route: Route
+  /** True in administrator mode, which is the only mode that shows the page tabs. */
+  admin: boolean
 }
 
 /** Brand, relay status and the language switch, over a translucent bar. */
-export function TopBar({ health, failed, lastSeenMs, route }: TopBarProps) {
+export function TopBar({ health, failed, lastSeenMs, route, admin }: TopBarProps) {
   const { t, formatClock } = useI18n()
   const { senior, toggle } = useSenior()
-  const label = failed
-    ? lastSeenMs > 0
-      ? t('status.offlineSince', { time: formatClock(lastSeenMs) })
-      : t('status.offline')
-    : health
-      ? t('status.online')
-      : t('status.checking')
+  // The visible text is one word beside a green, red or amber dot; the full sentence
+  // (with the last-seen time when offline) is the accessible name and the tooltip.
+  const label = failed ? t('status.offline') : health ? t('status.online') : t('status.checking')
+  const detail =
+    failed && lastSeenMs > 0 ? t('status.offlineSince', { time: formatClock(lastSeenMs) }) : label
   const state = failed ? 'offline' : health ? 'online' : 'checking'
 
   return (
@@ -33,19 +33,28 @@ export function TopBar({ health, failed, lastSeenMs, route }: TopBarProps) {
         <span className={styles.mark} aria-hidden="true" />
         IPTV
       </h1>
-      <nav className={styles.nav} aria-label={t('nav.main')}>
-        {(['channels', 'dashboard'] as const).map((target) => (
-          <a
-            key={target}
-            href={ROUTE_HASH[target]}
-            className={styles.link}
-            aria-current={route === target ? 'page' : undefined}
-          >
-            {t(target === 'channels' ? 'nav.channels' : 'nav.dashboard')}
-          </a>
-        ))}
-      </nav>
-      <div className={styles.status} role="status" data-state={state}>
+      {admin && (
+          <nav className={styles.nav} aria-label={t('nav.main')}>
+          {(['channels', 'dashboard'] as const).map((target) => (
+            <a
+              key={target}
+              href={ROUTE_HASH[target]}
+              className={styles.link}
+              aria-current={route === target ? 'page' : undefined}
+            >
+              {t(target === 'channels' ? 'nav.channels' : 'nav.dashboard')}
+            </a>
+          ))}
+        </nav>
+      )}
+      <span className={styles.spacer} aria-hidden="true" />
+      <div
+        className={styles.status}
+        role="status"
+        data-state={state}
+        aria-label={detail}
+        title={detail}
+      >
         <span className={styles.dot} aria-hidden="true" />
         <span className={styles.statusText}>{label}</span>
       </div>
