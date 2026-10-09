@@ -1,0 +1,102 @@
+name: CI
+
+# Runs the checks of the justfile whenever a push or pull request touches TypeScript code,
+# the package and compiler settings, or the lint configuration.
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - "**/*.ts"
+      - "**/*.tsx"
+      - package.json
+      - package-lock.json
+      - tsconfig*.json
+      - vite.config.ts
+      - eslint.config.js
+      - index.html
+      - .github/workflows/ci.yaml
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 24
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  rules:
+    name: Project rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No Service Locator vocabulary; `QueryClientProvider` is TanStack Query's own API name.
+      - name: Naming
+        run: |
+          ! grep -RniE --include='*.ts' --include='*.tsx' \
+              -e 'resolv[a-z_]*|provider|locator|registry|container' src | grep -v 'QueryClientProvider'
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    # Advisories appear and change without any commit, so this reports and never blocks.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm audit --omit=dev
