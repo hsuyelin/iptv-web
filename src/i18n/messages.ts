@@ -24,6 +24,7 @@ const en = {
 
   'nav.language': 'Language',
   'nav.senior': 'Senior mode',
+  'nav.seniorGlyph': 'Aa',
   'nav.main': 'Main',
   'nav.channels': 'Channels',
   'nav.dashboard': 'Dashboard',
@@ -98,6 +99,7 @@ const zhCN: Messages = {
 
   'nav.language': '语言',
   'nav.senior': '长辈模式',
+  'nav.seniorGlyph': '大',
   'nav.main': '主导航',
   'nav.channels': '频道',
   'nav.dashboard': '仪表盘',
@@ -167,6 +169,7 @@ const zhTW: Messages = {
 
   'nav.language': '語言',
   'nav.senior': '長輩模式',
+  'nav.seniorGlyph': '大',
   'nav.main': '主導覽',
   'nav.channels': '頻道',
   'nav.dashboard': '儀表板',

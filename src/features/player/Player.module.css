@@ -128,29 +128,44 @@
   border-radius: var(--radius-md);
 }
 
-/* Sits on the screen, clear of the native controls along the bottom. */
+/*
+ * An icon on the screen's top right: the native control bar along the bottom cannot take
+ * extra buttons, and a bare icon keeps the picture clear. Like the native bar it shows
+ * on hover or focus; touch screens, which have no hover, always show it.
+ */
 .playlistButton {
   position: absolute;
   inset: var(--space-3) var(--space-3) auto auto;
   z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-sm);
-  padding: 0 var(--space-4);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  font-size: 1.25rem;
   color: var(--ink);
-  background: rgba(20, 20, 20, 0.6);
+  background: rgba(20, 20, 20, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-line);
-  border-radius: var(--radius-pill);
+  border-radius: 50%;
+  transition: opacity 0.2s, background 0.15s;
 }
 
 .playlistButton:hover,
 .playlistButton[aria-expanded='true'] {
   background: rgba(60, 60, 60, 0.8);
+}
+
+@media (hover: hover) {
+  .playlistButton {
+    opacity: 0;
+  }
+
+  .screen:hover .playlistButton,
+  .playlistButton:focus-visible,
+  .playlistButton[aria-expanded='true'] {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -168,7 +183,8 @@
   position: fixed;
   inset: auto max(var(--space-4), env(safe-area-inset-right))
     max(var(--space-4), env(safe-area-inset-bottom)) auto;
-  z-index: 30;
+  /* Above every other layer, so the page never has to leave room for it. */
+  z-index: 100;
   width: min(380px, 64vw);
   min-width: 220px;
   max-width: calc(100vw - 2 * var(--space-4));

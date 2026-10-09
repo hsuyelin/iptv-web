@@ -163,12 +163,13 @@ function Surface({
           <button
             type="button"
             className={styles.playlistButton}
+            aria-label={t('player.playlist')}
+            title={t('player.playlist')}
             aria-expanded={playlistOpen}
             aria-controls={playlistId}
             onClick={() => onPlaylistOpenChange(!playlistOpen)}
           >
             <ListIcon />
-            {t('player.playlist')}
           </button>
         )}
         <video

@@ -68,6 +68,10 @@ export function TopBar({ health, failed, lastSeenMs, route, admin }: TopBarProps
         <span className={styles.aa} aria-hidden="true">
           Aa
         </span>
+        {/* Phones show only this badge: one character that reads as "large" in each language. */}
+        <span className={styles.glyph} aria-hidden="true">
+          {t('nav.seniorGlyph')}
+        </span>
         <span className={styles.seniorText}>{t('nav.senior')}</span>
       </button>
       <LanguageMenu />

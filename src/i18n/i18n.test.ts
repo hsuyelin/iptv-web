@@ -19,6 +19,12 @@ describe('messages', () => {
     }
   })
 
+  it('labels the senior-mode badge on phones with 大 in both Chinese scripts', () => {
+    expect(MESSAGES['zh-CN']['nav.seniorGlyph']).toBe('大')
+    expect(MESSAGES['zh-TW']['nav.seniorGlyph']).toBe('大')
+    expect(MESSAGES.en['nav.seniorGlyph']).toBe('Aa')
+  })
+
   it('keeps Traditional text distinct from Simplified', () => {
     expect(MESSAGES['zh-TW']['player.playlist']).toBe('播放清單')
     expect(MESSAGES['zh-CN']['player.playlist']).toBe('播放列表')

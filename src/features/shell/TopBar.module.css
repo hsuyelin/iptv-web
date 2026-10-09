@@ -140,12 +140,25 @@
   border-color: var(--accent);
 }
 
-.aa {
+.aa,
+.glyph {
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
+.glyph {
+  display: none;
+}
+
 @media (max-width: 520px) {
+  .aa {
+    display: none;
+  }
+
+  .glyph {
+    display: inline;
+  }
+
   .seniorText {
     position: absolute;
     width: 1px;
