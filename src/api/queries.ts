@@ -1,7 +1,12 @@
 import { QueryClient, useQuery } from '@tanstack/react-query'
 import { fetchChannels, fetchHealth } from './client'
+import type { HealthSample } from './types'
 
 export const HEALTH_INTERVAL_MS = 5000
+/** How many readings the dashboard chart keeps. */
+export const HISTORY_LENGTH = 30
+
+const HISTORY_KEY = ['health-history'] as const
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -25,9 +30,32 @@ export function useChannels() {
 export function useHealth() {
   return useQuery({
     queryKey: ['health'],
-    queryFn: ({ signal }) => fetchHealth(signal),
+    queryFn: async ({ signal, client }) => {
+      const health = await fetchHealth(signal)
+      const sample: HealthSample = {
+        at: Date.now(),
+        segmentsStreamed: health.segmentsStreamed,
+        segmentErrors: health.segmentErrors,
+      }
+      client.setQueryData<HealthSample[]>(HISTORY_KEY, (previous = []) =>
+        [...previous, sample].slice(-HISTORY_LENGTH),
+      )
+      return health
+    },
     refetchInterval: HEALTH_INTERVAL_MS,
     refetchIntervalInBackground: false,
     retry: 0,
   })
+}
+
+/** The most recent health readings, oldest first; filled in by `useHealth`. */
+export function useHealthHistory(): readonly HealthSample[] {
+  const history = useQuery<HealthSample[]>({
+    queryKey: HISTORY_KEY,
+    queryFn: () => [],
+    enabled: false,
+    initialData: [],
+    staleTime: Infinity,
+  })
+  return history.data
 }

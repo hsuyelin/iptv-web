@@ -30,6 +30,10 @@ const scenarios = [
   { name: 'playing', locale: 'zh-CN', senior: false, play: true },
   { name: 'tc', locale: 'zh-TW', senior: false, play: false },
   { name: 'senior', locale: 'zh-CN', senior: true, play: true, full: false },
+  { name: 'dashboard', locale: 'en', senior: false, play: false, hash: '#/dashboard', wait: 11000 },
+  { name: 'dashboard-senior', locale: 'zh-CN', senior: true, play: false, hash: '#/dashboard', full: false },
+  { name: 'menu', locale: 'zh-TW', senior: false, play: false, menu: true, full: false },
+  { name: 'broken-images', locale: 'en', senior: false, play: false, blockImages: true, full: false },
   { name: 'page2', locale: 'en', senior: false, play: false, nextPage: true },
   { name: 'senior-page2', locale: 'zh-TW', senior: true, play: false, nextPage: true, full: false },
   // Playing, then scrolled until the player is out of view: the video floats.
@@ -38,7 +42,7 @@ const scenarios = [
 ]
 
 /** Runs in the page: returns problems found in the current layout. */
-function audit() {
+function audit(allowFloatingOverlap) {
   const problems = []
   const root = document.documentElement
   if (root.scrollWidth > root.clientWidth + 1) {
@@ -48,7 +52,12 @@ function audit() {
     const r = el.getBoundingClientRect()
     const style = getComputedStyle(el)
     return (
-      r.width > 0 && r.height > 0 && style.visibility !== 'hidden' && style.display !== 'none'
+      r.width > 0 &&
+      r.height > 0 &&
+      style.visibility !== 'hidden' &&
+      style.display !== 'none' &&
+      // Row arrows fade in on hover; while invisible they cannot be obscured.
+      style.opacity !== '0'
     )
   }
   const inScroller = (el) => {
@@ -76,6 +85,9 @@ function audit() {
     const x = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1)
     const y = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1)
     const top = document.elementFromPoint(x, y)
+    // While the player floats it lies over whatever scrolls beneath it, by design. The
+    // check at the end of the page keeps it strict: there, nothing may be under the window.
+    if (allowFloatingOverlap && top?.closest('[data-floating="true"]')) continue
     if (top && top !== el && !el.contains(top) && !top.contains(el)) {
       problems.push(`covered: ${describe(el)} by ${describe(top)}`)
     }
@@ -147,8 +159,17 @@ for (const viewport of viewports) {
       [scenario.senior],
     )
     const page = await context.newPage()
-    await page.goto(base, { waitUntil: 'networkidle' })
-    await page.waitForSelector('section[aria-label] button, [role="alert"]', { timeout: 15000 })
+    if (scenario.blockImages) await page.route(/\.(png|jpg|jpeg|webp|gif)(\?.*)?$/, (route) => route.abort())
+    await page.goto(base + (scenario.hash ?? ''), { waitUntil: 'networkidle' })
+    await page.waitForSelector(
+      scenario.hash ? 'main h2' : 'section[aria-label] button, [role="alert"]',
+      { timeout: 15000 },
+    )
+    if (scenario.wait) await page.waitForTimeout(scenario.wait)
+    if (scenario.menu) {
+      await page.locator('header button[aria-haspopup="menu"]').click()
+      await page.waitForTimeout(300)
+    }
     if (scenario.play) {
       await page.locator('section[aria-label] button[aria-pressed]').first().click()
       await page.waitForTimeout(6000)
@@ -159,6 +180,26 @@ for (const viewport of viewports) {
     }
     if (!scenario.float) await page.evaluate(() => window.scrollTo(0, 0))
     const extra = []
+    if (scenario.menu) {
+      const box = await page.locator('[role="menu"]').boundingBox()
+      if (!box || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width) {
+        extra.push(`language menu outside the viewport: ${JSON.stringify(box)}`)
+      }
+      const items = await page.locator('[role="menuitemradio"]').count()
+      if (items !== 3) extra.push(`expected 3 languages, found ${items}`)
+    }
+    if (scenario.blockImages) {
+      // Pictures still waiting to load lazily are fine; one that failed must be swapped out.
+      const state = await page.evaluate(() => ({
+        placeholders: document.querySelectorAll('svg[data-placeholder]').length,
+        brokenShown: [...document.querySelectorAll('img')].filter(
+          (img) => img.complete && img.naturalWidth === 0,
+        ).length,
+      }))
+      if (state.placeholders === 0 || state.brokenShown > 0) {
+        extra.push(`broken pictures were not replaced: ${JSON.stringify(state)}`)
+      }
+    }
     if (scenario.float) {
       await page.evaluate((bottom) => {
         window.scrollTo(0, bottom ? document.documentElement.scrollHeight : innerHeight * 1.3)
@@ -185,7 +226,7 @@ for (const viewport of viewports) {
       }
     }
     await page.waitForTimeout(400)
-    const problems = [...(await page.evaluate(audit)), ...extra]
+    const problems = [...(await page.evaluate(audit, scenario.float === true)), ...extra]
     const file = join(out, `${viewport.name}-${scenario.name}.png`)
     await page.screenshot({ path: file, fullPage: scenario.full !== false })
     console.log(`${problems.length === 0 ? 'ok  ' : 'FAIL'} ${viewport.name}/${scenario.name}`)

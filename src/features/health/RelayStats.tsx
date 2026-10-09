@@ -31,7 +31,14 @@ export function RelayStats({ health, stale }: RelayStatsProps) {
           value={formatNumber(health.segmentErrors)}
           warn={health.segmentErrors > 0}
         />
+        <Fact label={t('stats.requests')} value={formatNumber(health.segmentRequests)} />
+        <Fact
+          label={t('stats.rejected')}
+          value={formatNumber(health.segmentsRejected)}
+          warn={health.segmentsRejected > 0}
+        />
         <Fact label={t('stats.upstream')} value={formatNumber(health.upstreamCalls)} />
+        <Fact label={t('stats.queued')} value={formatNumber(health.upstreamQueued)} />
       </dl>
     </section>
   )

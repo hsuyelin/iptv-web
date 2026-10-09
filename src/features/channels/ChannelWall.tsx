@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { Channel } from '../../api/types'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/Icons'
 import { useI18n } from '../../i18n/locale'
+import { LogoImage } from '../../components/LogoImage'
 import { Pagination } from '../../components/Pagination'
 import { groupChannels, OTHER_GROUP, pageGroups } from '../../lib/channels'
 import styles from './ChannelWall.module.css'
@@ -117,9 +118,7 @@ function Row({ title, channels, selectedSlug, unavailable, onSelect }: RowProps)
                 onClick={() => onSelect(channel)}
               >
                 <span className={styles.logo}>
-                  {channel.logo !== '' && (
-                    <img src={channel.logo} alt="" loading="lazy" decoding="async" />
-                  )}
+                  <LogoImage src={channel.logo} />
                 </span>
                 <span className={styles.name}>{channel.name}</span>
                 <span className={styles.marker} aria-hidden="true" />
@@ -159,9 +158,7 @@ function ListGroup({ title, channels, selectedSlug, unavailable, onSelect }: Row
                 onClick={() => onSelect(channel)}
               >
                 <span className={styles.lineLogo}>
-                  {channel.logo !== '' && (
-                    <img src={channel.logo} alt="" loading="lazy" decoding="async" />
-                  )}
+                  <LogoImage src={channel.logo} />
                 </span>
                 <span className={styles.lineName}>{channel.name}</span>
                 {onAir && <span className={styles.lineState}>{t('player.playing')}</span>}

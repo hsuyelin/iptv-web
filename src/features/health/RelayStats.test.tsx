@@ -6,6 +6,8 @@ import { TopBar } from '../shell/TopBar'
 
 const health: RelayHealth = {
   channelCount: 1234,
+  channelFile: '/app/channels.yaml',
+  startedAtMs: 1000,
   reloadError: null,
   playlistRequests: 5,
   segmentRequests: 9,
@@ -43,13 +45,13 @@ describe('RelayStats', () => {
 
 describe('TopBar status', () => {
   it('reports checking, online and unreachable states', () => {
-    const { rerender } = render(<TopBar health={undefined} failed={false} lastSeenMs={0} />)
+    const { rerender } = render(<TopBar health={undefined} failed={false} lastSeenMs={0} route="channels" />)
     expect(screen.getByRole('status')).toHaveTextContent('Checking the relay…')
-    rerender(<TopBar health={health} failed={false} lastSeenMs={1} />)
+    rerender(<TopBar health={health} failed={false} lastSeenMs={1} route="channels" />)
     expect(screen.getByRole('status')).toHaveTextContent('Relay online')
-    rerender(<TopBar health={undefined} failed lastSeenMs={0} />)
+    rerender(<TopBar health={undefined} failed lastSeenMs={0} route="channels" />)
     expect(screen.getByRole('status')).toHaveTextContent('Relay unreachable')
-    rerender(<TopBar health={health} failed lastSeenMs={Date.UTC(2026, 0, 1, 12, 34, 56)} />)
+    rerender(<TopBar health={health} failed lastSeenMs={Date.UTC(2026, 0, 1, 12, 34, 56)} route="channels" />)
     expect(screen.getByRole('status')).toHaveTextContent(/Relay unreachable, last seen/)
   })
 })

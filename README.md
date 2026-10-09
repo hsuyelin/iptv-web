@@ -3,8 +3,12 @@
 React 19 + TypeScript web console for the `iptv-rs` relay: channel browser, live player and
 relay health. It only presents; all data comes from the relay's HTTP routes.
 
-- Languages: 简体中文, 繁體中文 and English; the first visit follows the browser, later visits the
-  saved choice.
+- Languages: 简体中文, 繁體中文 and English, picked from a drop-down menu. The first visit follows the
+  browser; if the browser reports no supported language, Simplified Chinese is used. Later visits
+  use the saved choice.
+- Dashboard page (`#/dashboard`): relay state, uptime, counters, a throughput chart and what needs
+  attention (unavailable channels, a broken channel file).
+- Pictures that fail to load, or have no address, show one shared placeholder icon.
 - Senior mode (长辈模式): larger type and controls, and one large list instead of swipeable rows.
 - Paged channel list (24 per page, 10 in senior mode) instead of one very long screen.
 - Floating player: when the main player scrolls out of view the same video lifts into a corner

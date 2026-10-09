@@ -61,3 +61,45 @@ export const ArrowUpIcon = () => (
     <path d="M12 19V5M5 12l7-7 7 7" />
   </Icon>
 )
+
+export const CheckIcon = () => (
+  <Icon>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Icon>
+)
+
+export const ChevronDownIcon = () => (
+  <Icon>
+    <path d="m6 9 6 6 6-6" />
+  </Icon>
+)
+
+/**
+ * Stand-in for any picture that is missing or fails to load: a television with its
+ * antenna. It scales to the box it is put in and takes the surrounding text colour.
+ */
+export function PlaceholderIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      width="100%"
+      height="100%"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+      data-placeholder="true"
+      {...(className ? { className } : {})}
+    >
+      <path d="m22 9 10 9 10-9" />
+      <rect x="8" y="18" width="48" height="33" rx="7" />
+      <path d="M17 44l9-9 6 6 5-5 9 8" strokeOpacity=".7" />
+      <circle cx="40" cy="28" r="2.6" fill="currentColor" stroke="none" fillOpacity=".7" />
+      <path d="M22 57h20" />
+    </svg>
+  )
+}

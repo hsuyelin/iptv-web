@@ -98,6 +98,8 @@ export function parseHealth(json: unknown): RelayHealth {
   const reloadError = channels['reload_error']
   return {
     channelCount: count(channels['count']),
+    channelFile: text(channels['path']),
+    startedAtMs: count(stats['started_at_ms']),
     reloadError: typeof reloadError === 'string' && reloadError !== '' ? reloadError : null,
     playlistRequests: count(stats['playlist_requests']),
     segmentRequests: count(stats['segment_requests']),

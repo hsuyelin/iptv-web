@@ -35,11 +35,16 @@ describe('detectLocale', () => {
     expect(detectLocale(['zh-Hant'])).toBe('zh-TW')
   })
 
-  it('takes the first supported language and falls back to English', () => {
+  it('takes the first supported language', () => {
     expect(detectLocale(['fr-FR', 'zh-TW', 'en'])).toBe('zh-TW')
     expect(detectLocale(['en-GB'])).toBe('en')
-    expect(detectLocale(['ja', 'de'])).toBe('en')
-    expect(detectLocale([])).toBe('en')
+    expect(detectLocale(['ja', 'en-US'])).toBe('en')
+  })
+
+  it('falls back to Simplified Chinese when nothing usable is reported', () => {
+    expect(detectLocale([])).toBe('zh-CN')
+    expect(detectLocale(['ja', 'de'])).toBe('zh-CN')
+    expect(detectLocale([''])).toBe('zh-CN')
   })
 })
 

@@ -17,13 +17,16 @@ export const LOCALE_SHORT: Record<Locale, string> = {
 }
 
 const en = {
-  'app.title': 'IPTV Console',
+  'app.title': 'IPTV',
   'app.loadingChannels': 'Loading channels…',
   'app.channelsFailed': 'Cannot load the channel list. {detail}',
   'app.tryAgain': 'Try again',
 
   'nav.language': 'Language',
   'nav.senior': 'Senior mode',
+  'nav.main': 'Main',
+  'nav.channels': 'Channels',
+  'nav.dashboard': 'Dashboard',
 
   'status.online': 'Relay online',
   'status.offline': 'Relay unreachable',
@@ -52,6 +55,23 @@ const en = {
   'wall.clear': 'Clear filter',
   'wall.scrollBack': 'Scroll {group} back',
   'wall.scrollForward': 'Scroll {group} forward',
+
+  'dashboard.title': 'Relay dashboard',
+  'dashboard.updated': 'Last update',
+  'dashboard.uptime': 'Uptime',
+  'dashboard.file': 'Channel file',
+  'dashboard.unknown': 'Unknown',
+  'dashboard.waiting': 'Waiting for the first reading…',
+  'dashboard.traffic': 'Segments streamed',
+  'dashboard.trafficHint': 'New segments per {seconds} s, last {count} readings',
+  'dashboard.trafficEmpty': 'Collecting readings…',
+  'dashboard.attention': 'Needs attention',
+  'dashboard.allClear': 'Nothing needs attention.',
+  'dashboard.unavailable': 'Showing the notice stream instead of the channel:',
+  'dashboard.errorRate': 'Segment error rate',
+  'stats.requests': 'Segment requests',
+  'stats.rejected': 'Segments rejected',
+  'stats.queued': 'Upstream queue',
 
   'pager.label': 'Pages',
   'pager.prev': 'Previous page',
@@ -86,13 +106,16 @@ export type MessageKey = keyof typeof en
 export type Messages = Record<MessageKey, string>
 
 const zhCN: Messages = {
-  'app.title': 'IPTV 控制台',
+  'app.title': 'IPTV',
   'app.loadingChannels': '正在加载频道…',
   'app.channelsFailed': '无法加载频道列表。{detail}',
   'app.tryAgain': '重试',
 
   'nav.language': '语言',
   'nav.senior': '长辈模式',
+  'nav.main': '主导航',
+  'nav.channels': '频道',
+  'nav.dashboard': '仪表盘',
 
   'status.online': '中继在线',
   'status.offline': '中继无法连接',
@@ -120,6 +143,23 @@ const zhCN: Messages = {
   'wall.clear': '清除筛选',
   'wall.scrollBack': '向前滚动 {group}',
   'wall.scrollForward': '向后滚动 {group}',
+
+  'dashboard.title': '中继仪表盘',
+  'dashboard.updated': '最近更新',
+  'dashboard.uptime': '已运行',
+  'dashboard.file': '频道文件',
+  'dashboard.unknown': '未知',
+  'dashboard.waiting': '正在等待第一次读数…',
+  'dashboard.traffic': '已转发分片',
+  'dashboard.trafficHint': '每 {seconds} 秒新增分片数，最近 {count} 次读数',
+  'dashboard.trafficEmpty': '正在收集读数…',
+  'dashboard.attention': '需要关注',
+  'dashboard.allClear': '一切正常。',
+  'dashboard.unavailable': '正在播放提示流而不是频道：',
+  'dashboard.errorRate': '分片错误率',
+  'stats.requests': '分片请求',
+  'stats.rejected': '被拒绝的分片',
+  'stats.queued': '上游排队',
 
   'pager.label': '分页',
   'pager.prev': '上一页',
@@ -150,13 +190,16 @@ const zhCN: Messages = {
 }
 
 const zhTW: Messages = {
-  'app.title': 'IPTV 控制台',
+  'app.title': 'IPTV',
   'app.loadingChannels': '正在載入頻道…',
   'app.channelsFailed': '無法載入頻道清單。{detail}',
   'app.tryAgain': '重試',
 
   'nav.language': '語言',
   'nav.senior': '長輩模式',
+  'nav.main': '主導覽',
+  'nav.channels': '頻道',
+  'nav.dashboard': '儀表板',
 
   'status.online': '中繼在線',
   'status.offline': '中繼無法連線',
@@ -184,6 +227,23 @@ const zhTW: Messages = {
   'wall.clear': '清除篩選',
   'wall.scrollBack': '向前捲動 {group}',
   'wall.scrollForward': '向後捲動 {group}',
+
+  'dashboard.title': '中繼儀表板',
+  'dashboard.updated': '最近更新',
+  'dashboard.uptime': '已運行',
+  'dashboard.file': '頻道檔案',
+  'dashboard.unknown': '未知',
+  'dashboard.waiting': '正在等待第一次讀數…',
+  'dashboard.traffic': '已轉發分片',
+  'dashboard.trafficHint': '每 {seconds} 秒新增分片數，最近 {count} 次讀數',
+  'dashboard.trafficEmpty': '正在收集讀數…',
+  'dashboard.attention': '需要關注',
+  'dashboard.allClear': '一切正常。',
+  'dashboard.unavailable': '正在播放提示串流而不是頻道：',
+  'dashboard.errorRate': '分片錯誤率',
+  'stats.requests': '分片請求',
+  'stats.rejected': '被拒絕的分片',
+  'stats.queued': '上游排隊',
 
   'pager.label': '分頁',
   'pager.prev': '上一頁',

@@ -84,10 +84,18 @@
   inset: 12% 18% 34%;
 }
 
-.logo img {
+.logo img,
+.logo svg {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* The placeholder icon is quieter than a real logo. */
+.logo svg,
+.lineLogo svg {
+  color: var(--ink-muted);
+  opacity: 0.6;
 }
 
 .name {
@@ -252,7 +260,8 @@
   border-radius: var(--radius-md);
 }
 
-.lineLogo img {
+.lineLogo img,
+.lineLogo svg {
   width: 100%;
   height: 100%;
   object-fit: contain;

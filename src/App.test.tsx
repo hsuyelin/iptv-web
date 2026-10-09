@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type { EngineFactory } from './features/player/playback/engine'
 import { setInView } from './test/setup'
@@ -44,7 +44,6 @@ describe('App', () => {
     // A channel without a name shows its slug.
     expect(tile('misc')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('Relay online')).toBeInTheDocument())
-    expect(screen.getByText('Segments streamed').nextSibling).toHaveTextContent('9')
   })
 
   it('filters by name or slug and hides groups that end up empty', async () => {
@@ -126,32 +125,72 @@ describe('App', () => {
     expect(within(wall()).getAllByRole('button')).toHaveLength(4)
   })
 
-  it('switches the whole interface between the three languages and remembers the choice', async () => {
+  const chooseLanguage = async (name: string) => {
+    await userEvent.click(screen.getByRole('button', { name: /^(Language|语言|語言): / }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name }))
+  }
+
+  it('switches the whole interface between the three languages from a drop-down menu', async () => {
+    window.localStorage.setItem('iptv-web-locale', 'en')
     setup()
     await screen.findByRole('heading', { name: '央视' })
     expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: '简体中文' }))
+    await chooseLanguage('简体中文')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     expect(screen.getByLabelText('按名称筛选')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '其他' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('中继在线')).toBeInTheDocument())
 
-    await userEvent.click(screen.getByRole('button', { name: '繁體中文' }))
+    await chooseLanguage('繁體中文')
     expect(screen.getByLabelText('依名稱篩選')).toBeInTheDocument()
     expect(screen.getByText('中繼在線')).toBeInTheDocument()
     expect(screen.getByText('中繼在線').closest('[lang="zh-TW"]')).not.toBeNull()
     expect(window.localStorage.getItem('iptv-web-locale')).toBe('zh-TW')
 
-    await userEvent.click(screen.getByRole('button', { name: 'English' }))
+    await chooseLanguage('English')
     expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /^Language: English/ }))
+    expect(screen.getByRole('menuitemradio', { name: 'English' })).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('starts in the language the browser asks for', async () => {
-    window.localStorage.setItem('iptv-web-locale', 'zh-CN')
+  it('drives the language menu from the keyboard and closes it with Escape', async () => {
+    window.localStorage.setItem('iptv-web-locale', 'en')
     setup()
-    expect(await screen.findByLabelText('按名称筛选')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '简体中文' })).toHaveAttribute('aria-pressed', 'true')
+    await screen.findByRole('heading', { name: '央视' })
+    const user = userEvent.setup()
+    const button = screen.getByRole('button', { name: /^Language: English/ })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    // The open menu puts focus on the current language; arrows move, Escape returns.
+    expect(screen.getByRole('menuitemradio', { name: 'English' })).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(screen.getByRole('menuitemradio', { name: '繁體中文' })).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(screen.getByRole('menuitemradio', { name: '简体中文' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(button).toHaveFocus()
+    await user.click(button)
+    await user.keyboard('{Enter}')
+    expect(window.localStorage.getItem('iptv-web-locale')).toBe('en')
+  })
+
+  it('closes the language menu when something else is pressed', async () => {
+    setup()
+    await screen.findByRole('heading', { name: '央视' })
+    await userEvent.click(screen.getByRole('button', { name: /^Language: / }))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('Filter by name'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('starts in the saved language, else the browser language, else Simplified Chinese', async () => {
+    window.localStorage.setItem('iptv-web-locale', 'zh-TW')
+    setup()
+    expect(await screen.findByLabelText('依名稱篩選')).toBeInTheDocument()
   })
 
   it('offers a senior mode that lists the channels in one large column', async () => {
@@ -177,14 +216,15 @@ describe('App', () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: senior mode, the three languages, start, filter, group buttons, then the tiles.
+    // Order: page links, senior mode, the language menu, start, filter, group buttons, tiles.
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Channels' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
     await user.tab()
-    expect(screen.getByRole('button', { name: '简体中文' })).toHaveFocus()
-    await user.tab()
-    await user.tab()
-    // Then the empty stage's start button, then the filter.
+    expect(screen.getByRole('button', { name: /^Language: / })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: 'Start watching' })).toHaveFocus()
     await user.tab()
@@ -331,6 +371,97 @@ describe('App', () => {
       expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
       expect(screen.getByText('Nothing on air')).toBeInTheDocument()
       expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'false')
+    })
+  })
+
+  describe('language default', () => {
+    it('follows a Chinese browser', async () => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['zh-HK', 'en'])
+      setup()
+      expect(await screen.findByLabelText('依名稱篩選')).toBeInTheDocument()
+    })
+
+    it('uses Simplified Chinese when the browser reports no language', async () => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue([])
+      setup()
+      expect(await screen.findByLabelText('按名称筛选')).toBeInTheDocument()
+    })
+  })
+
+  it('titles the page simply IPTV in every language', async () => {
+    setup()
+    await screen.findByRole('heading', { name: '央视' })
+    await waitFor(() => expect(document.title).toBe('IPTV'))
+    await userEvent.click(screen.getByRole('button', { name: /^Language: / }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: '简体中文' }))
+    expect(document.title).toBe('IPTV')
+  })
+
+  it('swaps in the placeholder icon for a logo that fails to load', async () => {
+    setup()
+    await screen.findByRole('heading', { name: '央视' })
+    const picture = (name: RegExp) => within(tile(name)).queryByRole('presentation')
+    const placeholder = (name: RegExp) => within(tile(name)).queryByRole('img', { hidden: true })
+    // CCTV-1 has a logo address, so a picture is tried first; CCTV-2 has none.
+    expect(picture(/CCTV-1/)).not.toBeNull()
+    expect(placeholder(/CCTV-2/)).not.toBeNull()
+    expect(picture(/CCTV-2/)).toBeNull()
+    fireEvent.error(picture(/CCTV-1/)!)
+    expect(picture(/CCTV-1/)).toBeNull()
+    expect(placeholder(/CCTV-1/)).not.toBeNull()
+  })
+
+  describe('dashboard', () => {
+    afterEach(() => {
+      window.location.hash = ''
+    })
+
+    it('links to the dashboard and back, following the address bar', async () => {
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(screen.getByRole('link', { name: 'Channels' })).toHaveAttribute('aria-current', 'page')
+      await userEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
+      expect(await screen.findByRole('heading', { name: 'Relay dashboard' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+      expect(screen.queryByRole('region', { name: 'Channels' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('link', { name: 'Channels' }))
+      expect(await screen.findByRole('heading', { name: '央视' })).toBeInTheDocument()
+    })
+
+    it('shows the relay state, the counters and what needs attention', async () => {
+      server.use(
+        http.get(`${RELAY}/health`, () =>
+          HttpResponse.json(
+            healthPayload({
+              stats: { ...healthPayload().stats, started_at_ms: Date.now() - 3 * 3600_000 - 5 * 60_000 },
+              channels: { path: '/app/channels.yaml', count: 4, reload_error: 'bad line 3' },
+              notice: { url: 'u', ttl_ms: 1, cache: { cctv1: {}, ghost: {} } },
+            }),
+          ),
+        ),
+      )
+      window.location.hash = '#/dashboard'
+      setup()
+      expect(await screen.findByRole('heading', { name: 'Relay dashboard' })).toBeInTheDocument()
+      await waitFor(() => expect(screen.getAllByText('Relay online').length).toBeGreaterThan(0))
+      expect(screen.getByText('Segments streamed', { selector: 'dt' }).nextSibling).toHaveTextContent('9')
+      expect(screen.getByText('Uptime').nextSibling).toHaveTextContent(/3h 5m/)
+      expect(screen.getByText('/app/channels.yaml')).toBeInTheDocument()
+      expect(screen.getByText('Segment error rate').nextSibling).toHaveTextContent('10%')
+      // Known channels are shown by name, unknown ones by slug.
+      expect(screen.getByText('CCTV-1 综合', { selector: 'li' })).toBeInTheDocument()
+      expect(screen.getByText('ghost')).toBeInTheDocument()
+      expect(screen.getAllByRole('alert').some((el) => /bad line 3/.test(el.textContent ?? ''))).toBe(true)
+    })
+
+    it('says all is well when nothing needs attention, and reports an offline relay', async () => {
+      window.location.hash = '#/dashboard'
+      const { queryClient } = setup()
+      expect(await screen.findByText('Nothing needs attention.')).toBeInTheDocument()
+      expect(screen.getByText('Collecting readings…')).toBeInTheDocument()
+      server.use(http.get(`${RELAY}/health`, () => HttpResponse.error()))
+      await queryClient.refetchQueries({ queryKey: ['health'] })
+      await waitFor(() => expect(screen.getAllByText('Relay unreachable').length).toBeGreaterThan(0))
     })
   })
 })

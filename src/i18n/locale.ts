@@ -4,7 +4,13 @@ import { LOCALES, MESSAGES, type Locale, type MessageKey } from './messages'
 const STORAGE_KEY = 'iptv-web-locale'
 const listeners = new Set<() => void>()
 
-/** Maps browser language tags to the closest supported language; English otherwise. */
+/** Used when the browser's language is missing or is not one the console speaks. */
+export const FALLBACK_LOCALE: Locale = 'zh-CN'
+
+/**
+ * Maps browser language tags to the closest supported language. Falls back to Simplified
+ * Chinese when no tag is given or none of them is supported.
+ */
 export function detectLocale(languages: readonly string[]): Locale {
   for (const tag of languages) {
     const lower = tag.toLowerCase()
@@ -14,7 +20,7 @@ export function detectLocale(languages: readonly string[]): Locale {
     }
     if (lower.startsWith('en')) return 'en'
   }
-  return 'en'
+  return FALLBACK_LOCALE
 }
 
 function stored(): Locale | null {
@@ -27,7 +33,8 @@ function stored(): Locale | null {
 }
 
 function snapshot(): Locale {
-  return stored() ?? detectLocale(window.navigator.languages ?? [window.navigator.language])
+  const languages = window.navigator.languages ?? [window.navigator.language]
+  return stored() ?? detectLocale(languages.filter((tag) => typeof tag === 'string'))
 }
 
 function subscribe(listener: () => void): () => void {
@@ -52,11 +59,13 @@ export interface I18n {
   t: (key: MessageKey, params?: Record<string, string | number>) => string
   formatNumber: (value: number) => string
   formatClock: (epochMs: number) => string
+  /** "3h 12m": the two largest units of a duration, in the active language. */
+  formatDuration: (ms: number) => string
 }
 
 /** The active language: the saved choice, else the browser's, else English. */
 export function useI18n(): I18n {
-  const locale = useSyncExternalStore(subscribe, snapshot, (): Locale => 'en')
+  const locale = useSyncExternalStore(subscribe, snapshot, (): Locale => FALLBACK_LOCALE)
   const setLocale = useCallback((next: Locale) => {
     try {
       window.localStorage.setItem(STORAGE_KEY, next)
@@ -77,5 +86,28 @@ export function useI18n(): I18n {
     (epochMs: number) => new Date(epochMs).toLocaleTimeString(locale, { hour12: false }),
     [locale],
   )
-  return { locale, setLocale, t, formatNumber, formatClock }
+  const formatDuration = useCallback(
+    (ms: number) => {
+      const seconds = Math.max(0, Math.floor(ms / 1000))
+      const parts: Array<[number, Intl.NumberFormatOptions['unit']]> = [
+        [Math.floor(seconds / 86_400), 'day'],
+        [Math.floor((seconds % 86_400) / 3600), 'hour'],
+        [Math.floor((seconds % 3600) / 60), 'minute'],
+        [seconds % 60, 'second'],
+      ]
+      const used = parts.filter(([value]) => value > 0).slice(0, 2)
+      const shown = used.length > 0 ? used : [parts[3]!]
+      return shown
+        .map(([value, unit]) =>
+          new Intl.NumberFormat(locale, {
+            style: 'unit',
+            unit,
+            unitDisplay: 'narrow',
+          }).format(value),
+        )
+        .join(' ')
+    },
+    [locale],
+  )
+  return { locale, setLocale, t, formatNumber, formatClock, formatDuration }
 }
