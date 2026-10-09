@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server, RELAY, channelsPayload, healthPayload } from '../test/server'
 import {
   ApiError,
+  describeFailure,
   fetchChannels,
   fetchHealth,
   livePlaylistUrl,
@@ -185,6 +186,35 @@ describe('livePlaylistUrl', () => {
     expect(livePlaylistUrl('cctv1', false)).toBe(`${RELAY}/live/cctv1.m3u8`)
     expect(livePlaylistUrl('cctv1', true)).toBe(`${RELAY}/live/cctv1.m3u8?profile=compat`)
     expect(livePlaylistUrl('a b', true)).toBe(`${RELAY}/live/a%20b.m3u8?profile=compat`)
+  })
+})
+
+describe('describeFailure', () => {
+  it('keeps the reason that Node hides in `cause`', () => {
+    const failure = new TypeError('fetch failed', { cause: new Error('connect ECONNREFUSED 127.0.0.1:8787') })
+    expect(describeFailure(failure)).toBe('fetch failed (connect ECONNREFUSED 127.0.0.1:8787)')
+  })
+
+  it('says nothing extra where there is no cause, as in a browser', () => {
+    expect(describeFailure(new TypeError('Failed to fetch'))).toBe('Failed to fetch')
+    expect(describeFailure(new TypeError('x', { cause: 'not an error' }))).toBe('x')
+    expect(describeFailure(new TypeError('same', { cause: new Error('same') }))).toBe('same')
+    expect(describeFailure(new TypeError('x', { cause: new Error('') }))).toBe('x')
+  })
+
+  it('copes with a failure that is not an error at all', () => {
+    expect(describeFailure('boom')).toBe('request failed')
+    expect(describeFailure(undefined)).toBe('request failed')
+  })
+})
+
+describe('a request that finds no handler', () => {
+  it('reports the reason, not only "fetch failed"', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.error()))
+    await expect(fetchChannels()).rejects.toMatchObject({
+      failure: 'network',
+      message: expect.stringContaining('Relay unreachable: '),
+    })
   })
 })
 

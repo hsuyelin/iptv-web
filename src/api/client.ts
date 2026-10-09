@@ -35,6 +35,18 @@ export function livePlaylistUrl(slug: string, compat = false): string {
   return relayUrl(`/live/${encodeURIComponent(slug)}.m3u8${profile}`)
 }
 
+/**
+ * Why a request failed, in a few words. Some runtimes (Node's fetch) say only "fetch failed"
+ * and keep the real reason, such as a refused connection, in `cause`; browsers have none.
+ */
+export function describeFailure(failure: unknown): string {
+  if (!(failure instanceof Error)) return 'request failed'
+  const inner = (failure as { cause?: unknown }).cause
+  return inner instanceof Error && inner.message !== '' && inner.message !== failure.message
+    ? `${failure.message} (${inner.message})`
+    : failure.message
+}
+
 async function fetchJson(path: string, signal: AbortSignal | undefined): Promise<unknown> {
   const { signal: timed, done } = timedSignal(DEFAULT_TIMEOUT_MS, signal)
   try {
@@ -42,8 +54,7 @@ async function fetchJson(path: string, signal: AbortSignal | undefined): Promise
     try {
       response = await fetch(relayUrl(path), { signal: timed })
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : 'request failed'
-      throw new ApiError('network', `Relay unreachable: ${reason}`)
+      throw new ApiError('network', `Relay unreachable: ${describeFailure(cause)}`)
     }
     if (!response.ok) {
       throw new ApiError('status', `Relay answered ${response.status}`, response.status)

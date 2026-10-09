@@ -3,9 +3,22 @@ import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { server } from './server'
 
-beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
-afterEach(() => {
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: 'error' })
+  // A request without a handler fails the page with a bare "fetch failed". Say which one.
+  server.events.on('request:unhandled', ({ request }) => {
+    try {
+      console.error(`[test] no request handler for ${request.method} ${request.url}`)
+    } catch {
+      // Looking must never change what happens to the request.
+    }
+  })
+})
+afterEach(async () => {
   cleanup()
+  // Unmounting aborts the page's requests. Let them finish with the handlers they started
+  // with before the handlers change, so one test's leftovers cannot reach the next one.
+  await new Promise((done) => setTimeout(done, 0))
   vi.restoreAllMocks()
   window.localStorage.clear()
   window.history.replaceState({}, '', '/')
