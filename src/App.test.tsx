@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { App } from './App'
 import type { EngineFactory } from './features/player/playback/engine'
-import { channelsPayload, healthPayload, RELAY, server } from './test/server'
+import { setInView } from './test/setup'
+import { channelsPayload, healthPayload, manyChannelsPayload, RELAY, server } from './test/server'
 
 function setup() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -199,5 +200,137 @@ describe('App', () => {
     await user.keyboard('{Enter}')
     expect(screen.getByRole('button', { name: /CCTV-1/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText(/CCTV-1 综合 live stream/)).toBeInTheDocument()
+  })
+
+  describe('pagination', () => {
+    const useMany = (count: number) =>
+      server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(count))))
+    const pager = () => screen.getByRole('navigation', { name: 'Pages' })
+
+    it('splits a long list into pages and moves between them', async () => {
+      useMany(60)
+      setup()
+      await screen.findByRole('heading', { name: 'Even' })
+      expect(within(wall()).getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(24)
+      expect(tile('Channel 1')).toBeInTheDocument()
+      // Channels are listed group by group: the Even group (odd numbers) fills page 1.
+      expect(screen.queryByRole('button', { name: 'Channel 49' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+      expect(screen.getByRole('button', { name: 'Channel 49' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Channel 1' })).not.toBeInTheDocument()
+      expect(within(pager()).getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
+
+      await userEvent.click(within(pager()).getByRole('button', { name: 'Page 3' }))
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Channel 60' })).toBeInTheDocument()
+    })
+
+    it('has no pager when everything fits on one page', async () => {
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument()
+    })
+
+    it('goes back to the first page when the filter or group changes', async () => {
+      useMany(60)
+      setup()
+      await screen.findByRole('heading', { name: 'Even' })
+      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+      await userEvent.type(screen.getByLabelText('Filter by name'), 'Channel 1')
+      // "Channel 1", "Channel 10".."Channel 19": 11 channels, so one page and no pager.
+      expect(screen.getByRole('button', { name: 'Channel 1' })).toBeInTheDocument()
+      expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument()
+      await userEvent.clear(screen.getByLabelText('Filter by name'))
+      expect(within(pager()).getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    })
+
+    it('uses smaller pages in senior mode and keeps the selection across pages', async () => {
+      useMany(60)
+      setup()
+      await screen.findByRole('heading', { name: 'Even' })
+      await userEvent.click(tile('Channel 1'))
+      await userEvent.click(screen.getByRole('button', { name: 'Senior mode' }))
+      expect(within(wall()).getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(10)
+      expect(within(pager()).getByRole('button', { name: 'Page 6' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+      // The channel on air is on page 1, but the player keeps playing it.
+      expect(screen.getByLabelText('Channel 1 live stream')).toBeInTheDocument()
+    })
+  })
+
+  describe('floating player', () => {
+    const slotOf = () => screen.getByLabelText(/live stream/).closest('[data-floating]')!.parentElement!
+    const screenOf = () => screen.getByLabelText(/live stream/).closest('[data-floating]')!
+
+    it('lifts the one video into a floating window when the player leaves the view, and back', async () => {
+      const { loads, destroyed } = setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      expect(screenOf()).toHaveAttribute('data-floating', 'false')
+      const video = screen.getByLabelText(/live stream/)
+
+      act(() => setInView(slotOf(), false))
+      expect(screenOf()).toHaveAttribute('data-floating', 'true')
+      expect(screen.getByRole('group', { name: 'Floating player' })).toBeInTheDocument()
+      // The same element carries on: one video, one stream, nothing restarted.
+      expect(screen.getAllByLabelText(/live stream/)).toHaveLength(1)
+      expect(screen.getByLabelText(/live stream/)).toBe(video)
+      expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(1)
+      expect(loads).toHaveLength(1)
+      expect(destroyed).toHaveLength(0)
+
+      act(() => setInView(slotOf(), true))
+      expect(screenOf()).toHaveAttribute('data-floating', 'false')
+      expect(screen.queryByRole('group', { name: 'Floating player' })).not.toBeInTheDocument()
+      expect(screen.getByLabelText(/live stream/)).toBe(video)
+      expect(loads).toHaveLength(1)
+    })
+
+    it('never floats before something is playing', async () => {
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      expect(screen.queryByRole('group', { name: 'Floating player' })).not.toBeInTheDocument()
+      expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
+    })
+
+    it('keeps a single video while floating and the channel changes', async () => {
+      const { loads, destroyed } = setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      act(() => setInView(slotOf(), false))
+      await userEvent.click(tile(/CCTV-2/))
+      expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
+      expect(loads).toHaveLength(2)
+      expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(1)
+    })
+
+    it('scrolls back to the player from the floating window', async () => {
+      const scrolls: Element[] = []
+      Element.prototype.scrollIntoView = function (this: Element) {
+        scrolls.push(this)
+      }
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      const slot = slotOf()
+      act(() => setInView(slot, false))
+      await userEvent.click(screen.getByRole('button', { name: 'Back to the player' }))
+      expect(scrolls).toContain(slot)
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    })
+
+    it('closing the floating window stops the stream', async () => {
+      const { destroyed } = setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      act(() => setInView(slotOf(), false))
+      await userEvent.click(screen.getByRole('button', { name: 'Close the floating window' }))
+      expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
+      expect(screen.queryAllByLabelText(/live stream/)).toHaveLength(0)
+      expect(screen.getByText('Nothing on air')).toBeInTheDocument()
+      expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'false')
+    })
   })
 })

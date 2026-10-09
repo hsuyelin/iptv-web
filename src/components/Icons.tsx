@@ -49,3 +49,15 @@ export const GlobeIcon = () => (
     <path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" />
   </Icon>
 )
+
+export const CloseIcon = () => (
+  <Icon>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Icon>
+)
+
+export const ArrowUpIcon = () => (
+  <Icon>
+    <path d="M12 19V5M5 12l7-7 7 7" />
+  </Icon>
+)

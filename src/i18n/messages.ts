@@ -53,7 +53,17 @@ const en = {
   'wall.scrollBack': 'Scroll {group} back',
   'wall.scrollForward': 'Scroll {group} forward',
 
+  'pager.label': 'Pages',
+  'pager.prev': 'Previous page',
+  'pager.next': 'Next page',
+  'pager.page': 'Page {page}',
+  'pager.status': 'Page {page} of {total}',
+
   'player.label': 'Player',
+  'player.floatBack': 'Back to the player',
+  'player.floatClose': 'Close the floating window',
+  'player.floating': 'Floating player',
+
   'player.emptyTitle': 'Nothing on air',
   'player.emptyText': 'Pick a channel below to start watching.',
   'player.start': 'Start watching',
@@ -111,7 +121,17 @@ const zhCN: Messages = {
   'wall.scrollBack': '向前滚动 {group}',
   'wall.scrollForward': '向后滚动 {group}',
 
+  'pager.label': '分页',
+  'pager.prev': '上一页',
+  'pager.next': '下一页',
+  'pager.page': '第 {page} 页',
+  'pager.status': '第 {page} / {total} 页',
+
   'player.label': '播放器',
+  'player.floatBack': '回到播放器',
+  'player.floatClose': '关闭悬浮窗',
+  'player.floating': '悬浮播放器',
+
   'player.emptyTitle': '当前没有播放',
   'player.emptyText': '从下方选择一个频道开始观看。',
   'player.start': '开始观看',
@@ -165,7 +185,16 @@ const zhTW: Messages = {
   'wall.scrollBack': '向前捲動 {group}',
   'wall.scrollForward': '向後捲動 {group}',
 
+  'pager.label': '分頁',
+  'pager.prev': '上一頁',
+  'pager.next': '下一頁',
+  'pager.page': '第 {page} 頁',
+  'pager.status': '第 {page} / {total} 頁',
+
   'player.label': '播放器',
+  'player.floatBack': '回到播放器',
+  'player.floatClose': '關閉懸浮視窗',
+  'player.floating': '懸浮播放器',
   'player.emptyTitle': '目前沒有播放',
   'player.emptyText': '從下方選擇一個頻道開始觀看。',
   'player.start': '開始觀看',

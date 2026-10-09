@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
-import { PlayIcon } from '../../components/Icons'
+import { ArrowUpIcon, CloseIcon, PlayIcon } from '../../components/Icons'
+import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
 import type { MessageKey } from '../../i18n/messages'
 import type { EngineFactory } from './playback/engine'
@@ -14,6 +15,8 @@ interface PlayerProps {
   unavailable: boolean
   /** Starts the first channel; shown on the empty stage when there is one to start. */
   onStart?: () => void
+  /** Stops the stream and clears the selection; used by the floating window's close. */
+  onClose?: () => void
   factory?: EngineFactory
 }
 
@@ -25,7 +28,7 @@ const STATE_LABEL: Record<PlaybackState, MessageKey> = {
 }
 
 /** The stage: artwork behind a rounded screen, with the channel's name and state under it. */
-export function Player({ channel, unavailable, onStart, factory }: PlayerProps) {
+export function Player({ channel, unavailable, onStart, onClose, factory }: PlayerProps) {
   const { t } = useI18n()
   const [attempt, setAttempt] = useState(0)
 
@@ -56,6 +59,7 @@ export function Player({ channel, unavailable, onStart, factory }: PlayerProps) 
         channel={channel}
         unavailable={unavailable}
         onRetry={() => setAttempt((value) => value + 1)}
+        {...(onClose ? { onClose } : {})}
         {...(factory ? { factory } : {})}
       />
     </section>
@@ -66,11 +70,22 @@ interface SurfaceProps {
   channel: Channel
   unavailable: boolean
   onRetry: () => void
+  onClose?: () => void
   factory?: EngineFactory
 }
 
-function Surface({ channel, unavailable, onRetry, factory }: SurfaceProps) {
+/**
+ * One <video>, one engine. When the slot that holds the screen scrolls out of view the
+ * very same screen is lifted into a floating window by CSS alone, and it drops back into
+ * the slot when the slot is visible again. Nothing is mounted twice, so the stream never
+ * plays in two places and the audio cannot overlap.
+ */
+function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfaceProps) {
   const { t } = useI18n()
+  const slotRef = useRef<HTMLDivElement>(null)
+  // The sticky bar covers the top of the page, so the slot counts as gone once it is under it.
+  const visible = useInView(slotRef, { threshold: 0.25, rootMargin: '-72px 0px 0px 0px' })
+  const floating = !visible
   const { videoRef, state, failure, handlers } = useHlsPlayback({
     url: livePlaylistUrl(channel.slug),
     ...(factory ? { factory } : {}),
@@ -79,7 +94,38 @@ function Surface({ channel, unavailable, onRetry, factory }: SurfaceProps) {
 
   return (
     <div className={styles.frame}>
-      <div className={styles.screen} data-state={state}>
+      <div className={styles.slot} ref={slotRef}>
+      <div
+        className={styles.screen}
+        data-state={state}
+        data-floating={floating}
+        {...(floating ? { role: 'group', 'aria-label': t('player.floating') } : {})}
+      >
+        {floating && (
+          <div className={styles.floatBar}>
+            <span className={styles.floatName}>{channel.name}</span>
+            <button
+              type="button"
+              className={styles.floatButton}
+              aria-label={t('player.floatBack')}
+              onClick={() =>
+                slotRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+              }
+            >
+              <ArrowUpIcon />
+            </button>
+            {onClose && (
+              <button
+                type="button"
+                className={styles.floatButton}
+                aria-label={t('player.floatClose')}
+                onClick={onClose}
+              >
+                <CloseIcon />
+              </button>
+            )}
+          </div>
+        )}
         <video
           ref={videoRef}
           className={styles.video}
@@ -100,6 +146,7 @@ function Surface({ channel, unavailable, onRetry, factory }: SurfaceProps) {
             </button>
           </div>
         )}
+      </div>
       </div>
       <div className={styles.meta}>
         <span className={styles.badge} data-on={onAir}>

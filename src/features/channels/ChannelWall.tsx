@@ -2,7 +2,8 @@ import { useRef } from 'react'
 import type { Channel } from '../../api/types'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/Icons'
 import { useI18n } from '../../i18n/locale'
-import { groupChannels, OTHER_GROUP } from '../../lib/channels'
+import { Pagination } from '../../components/Pagination'
+import { groupChannels, OTHER_GROUP, pageGroups } from '../../lib/channels'
 import styles from './ChannelWall.module.css'
 
 interface ChannelWallProps {
@@ -18,6 +19,10 @@ interface ChannelWallProps {
   unavailable: readonly string[]
   /** `rows` swipes per group; `list` stacks every channel in one large column. */
   layout: 'rows' | 'list'
+  /** Current page, 1-based, and how many channels one page holds. */
+  page: number
+  pageSize: number
+  onPageChange: (page: number) => void
 }
 
 /** The channels as one swipeable row per group, with the selected one marked on air. */
@@ -30,11 +35,16 @@ export function ChannelWall({
   onClear,
   unavailable,
   layout,
+  page,
+  pageSize,
+  onPageChange,
 }: ChannelWallProps) {
   const { t } = useI18n()
-  const visible = groupChannels(channels, filter).filter(
+  const matching = groupChannels(channels, filter).filter(
     (entry) => group === null || entry.name === group,
   )
+  const current = pageGroups(matching, page, pageSize)
+  const visible = current.groups
   if (visible.length === 0) {
     return (
       <section className={styles.wall} aria-label={t('wall.label')}>
@@ -63,6 +73,7 @@ export function ChannelWall({
           <Row key={entry.name} {...props} />
         )
       })}
+      <Pagination page={current.page} pageCount={current.pageCount} onPageChange={onPageChange} />
     </section>
   )
 }

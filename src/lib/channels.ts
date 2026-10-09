@@ -36,3 +36,51 @@ export function groupChannels(channels: readonly Channel[], filter: string): Cha
 export function groupNames(channels: readonly Channel[]): string[] {
   return groupChannels(channels, '').map((group) => group.name)
 }
+
+export interface ChannelPage {
+  /** The groups on this page; a group that continues on the next page is cut short. */
+  readonly groups: ChannelGroup[]
+  /** The page shown, clamped to the range that exists (1-based). */
+  readonly page: number
+  readonly pageCount: number
+  readonly total: number
+}
+
+/**
+ * Cuts the grouped channels into pages of `size` channels, in display order, and returns
+ * page `page` (clamped). A group split across pages keeps its heading on each of them.
+ */
+export function pageGroups(groups: readonly ChannelGroup[], page: number, size: number): ChannelPage {
+  const total = groups.reduce((sum, group) => sum + group.channels.length, 0)
+  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, size)))
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount)
+  const start = (current - 1) * size
+  const end = start + size
+
+  const shown: ChannelGroup[] = []
+  let seen = 0
+  for (const group of groups) {
+    const from = Math.max(start - seen, 0)
+    const to = Math.min(end - seen, group.channels.length)
+    if (to > from) shown.push({ name: group.name, channels: group.channels.slice(from, to) })
+    seen += group.channels.length
+    if (seen >= end) break
+  }
+  return { groups: shown, page: current, pageCount, total }
+}
+
+/** Page numbers to show: the first, the last and a window around `page`, with gaps as null. */
+export function pageWindow(page: number, pageCount: number, around = 1): Array<number | null> {
+  const wanted = new Set<number>([1, pageCount])
+  for (let n = page - around; n <= page + around; n += 1) {
+    if (n >= 1 && n <= pageCount) wanted.add(n)
+  }
+  const sorted = [...wanted].sort((a, b) => a - b)
+  const result: Array<number | null> = []
+  sorted.forEach((n, index) => {
+    const previous = sorted[index - 1]
+    if (previous !== undefined && n - previous > 1) result.push(null)
+    result.push(n)
+  })
+  return result
+}

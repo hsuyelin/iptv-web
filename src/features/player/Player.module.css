@@ -15,12 +15,18 @@
   min-width: 0;
 }
 
-.screen {
+/* The slot keeps the screen's place in the page while the screen floats away. */
+.slot {
   position: relative;
   /* Never taller than 62% of the window, so the rows stay in view. */
   width: min(100%, calc(62dvh * 16 / 9));
   margin-inline: auto;
   aspect-ratio: 16 / 9;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background: var(--screen);
   border: 1px solid var(--glass-line);
@@ -81,6 +87,11 @@
 }
 
 .empty {
+  position: relative;
+  inset: auto;
+  width: min(100%, calc(62dvh * 16 / 9));
+  margin-inline: auto;
+  aspect-ratio: 16 / 9;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -179,4 +190,70 @@
   .screen {
     border-radius: var(--radius-md);
   }
+}
+
+/* Floating window: the screen itself, fixed to the corner. */
+.screen[data-floating='true'] {
+  position: fixed;
+  inset: auto max(var(--space-4), env(safe-area-inset-right))
+    max(var(--space-4), env(safe-area-inset-bottom)) auto;
+  z-index: 30;
+  width: min(380px, 64vw);
+  min-width: 220px;
+  max-width: calc(100vw - 2 * var(--space-4));
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
+  animation: float-in 0.22s ease-out;
+}
+
+.app[data-senior='true'] .screen[data-floating='true'] {
+  width: min(520px, 80vw);
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+.floatBar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+}
+
+.floatName {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floatButton {
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  font-size: 1.1rem;
+  color: var(--ink);
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+}
+
+.floatButton:hover {
+  background: rgba(60, 60, 60, 0.8);
 }

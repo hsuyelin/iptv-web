@@ -15,6 +15,19 @@ export const channelsPayload = {
   ],
 }
 
+/** A channels payload with `count` channels spread over two groups. */
+export function manyChannelsPayload(count: number) {
+  const channels = Array.from({ length: count }, (_, index) => ({
+    ch: `ch${index + 1}`,
+    chinese: `Channel ${index + 1}`,
+    cnlid: String(index),
+    livepid: String(index),
+    group: index % 2 === 0 ? 'Even' : 'Odd',
+    logo: '',
+  }))
+  return { ok: true, path: '/app/channels.yaml', count, channels }
+}
+
 export function healthPayload(overrides: Record<string, unknown> = {}) {
   return {
     ok: true,

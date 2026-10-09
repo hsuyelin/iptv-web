@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useChannels, useHealth } from './api/queries'
 import type { Channel } from './api/types'
 import { ChannelRail } from './features/channels/ChannelRail'
@@ -13,6 +13,10 @@ import { groupChannels } from './lib/channels'
 import stageArt from './assets/stage.svg'
 import styles from './App.module.css'
 
+/** Channels per page: a swipeable row layout fits more than the large one-column list. */
+const PAGE_SIZE = 24
+const SENIOR_PAGE_SIZE = 10
+
 interface AppProps {
   /** Replaces the HLS engine; used by tests. */
   engineFactory?: EngineFactory
@@ -26,9 +30,12 @@ export function App({ engineFactory }: AppProps) {
   const [filter, setFilter] = useState('')
   const [group, setGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<Channel | null>(null)
+  const [page, setPage] = useState(1)
+  const wallTop = useRef<HTMLDivElement>(null)
 
   const unavailable = health.data?.unavailable ?? []
   const isUnavailable = selected !== null && unavailable.includes(selected.slug.toLowerCase())
+  const pageSize = senior ? SENIOR_PAGE_SIZE : PAGE_SIZE
   const first = channels.data ? groupChannels(channels.data, '')[0]?.channels[0] : undefined
 
   return (
@@ -45,6 +52,7 @@ export function App({ engineFactory }: AppProps) {
           channel={selected}
           unavailable={isUnavailable}
           {...(first ? { onStart: () => setSelected(first) } : {})}
+          onClose={() => setSelected(null)}
           {...(engineFactory ? { factory: engineFactory } : {})}
         />
         <div className={styles.content}>
@@ -66,23 +74,39 @@ export function App({ engineFactory }: AppProps) {
               <ChannelRail
                 channels={channels.data}
                 filter={filter}
-                onFilterChange={setFilter}
-                group={group}
-                onGroupChange={setGroup}
-              />
-              <ChannelWall
-                channels={channels.data}
-                filter={filter}
-                group={group}
-                selectedSlug={selected?.slug ?? null}
-                onSelect={setSelected}
-                onClear={() => {
-                  setFilter('')
-                  setGroup(null)
+                onFilterChange={(value) => {
+                  setFilter(value)
+                  setPage(1)
                 }}
-                unavailable={unavailable}
-                layout={senior ? 'list' : 'rows'}
+                group={group}
+                onGroupChange={(value) => {
+                  setGroup(value)
+                  setPage(1)
+                }}
               />
+              <div ref={wallTop} className={styles.wallTop}>
+                <ChannelWall
+                  channels={channels.data}
+                  filter={filter}
+                  group={group}
+                  selectedSlug={selected?.slug ?? null}
+                  onSelect={setSelected}
+                  onClear={() => {
+                    setFilter('')
+                    setGroup(null)
+                    setPage(1)
+                  }}
+                  unavailable={unavailable}
+                  layout={senior ? 'list' : 'rows'}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={(next) => {
+                    setPage(next)
+                    // Bring the top of the list back into view; the old page's end is off screen.
+                    wallTop.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+                  }}
+                />
+              </div>
             </>
           )}
           <RelayStats health={health.data} stale={health.isError} />
