@@ -19,12 +19,6 @@
   min-width: 0;
 }
 
-.wallTop {
-  /* Scroll target for page changes, clear of the sticky bar. */
-  min-width: 0;
-  scroll-margin-top: 88px;
-}
-
 /* While the player floats in the corner, keep the end of the page clear of it. */
 .app:has([data-floating='true']) .content {
   padding-bottom: calc(var(--space-6) + 240px);

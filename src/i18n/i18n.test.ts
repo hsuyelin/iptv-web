@@ -20,8 +20,8 @@ describe('messages', () => {
   })
 
   it('keeps Traditional text distinct from Simplified', () => {
-    expect(MESSAGES['zh-TW']['player.failed']).toBe('播放失敗')
-    expect(MESSAGES['zh-CN']['player.failed']).toBe('播放失败')
+    expect(MESSAGES['zh-TW']['player.playlist']).toBe('播放清單')
+    expect(MESSAGES['zh-CN']['player.playlist']).toBe('播放列表')
   })
 })
 

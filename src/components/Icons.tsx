@@ -18,10 +18,10 @@ function Icon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-export const SearchIcon = () => (
+export const ListIcon = () => (
   <Icon>
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.5-3.5" />
+    <path d="M8 6h13M8 12h13M8 18h13" />
+    <path d="M3 6h.01M3 12h.01M3 18h.01" />
   </Icon>
 )
 

@@ -1,16 +1,20 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
-import { ArrowUpIcon, CloseIcon, PlayIcon } from '../../components/Icons'
+import { ArrowUpIcon, CloseIcon, ListIcon, PlayIcon } from '../../components/Icons'
 import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
-import type { MessageKey } from '../../i18n/messages'
 import type { EngineFactory } from './playback/engine'
-import { useHlsPlayback, type PlaybackState } from './playback/useHlsPlayback'
+import { useHlsPlayback } from './playback/useHlsPlayback'
+import { Playlist } from './Playlist'
 import styles from './Player.module.css'
 
 interface PlayerProps {
   channel: Channel | null
+  /** Every channel, for the playlist sidebar. */
+  channels?: readonly Channel[]
+  /** Switches to another channel; used by the playlist sidebar. */
+  onSelect?: (channel: Channel) => void
   /** True when the relay is redirecting this channel to its notice stream. */
   unavailable: boolean
   /** Starts the first channel; shown on the empty stage when there is one to start. */
@@ -20,17 +24,20 @@ interface PlayerProps {
   factory?: EngineFactory
 }
 
-const STATE_LABEL: Record<PlaybackState, MessageKey> = {
-  loading: 'player.loading',
-  playing: 'player.playing',
-  stalled: 'player.stalled',
-  failed: 'player.failed',
-}
-
-/** The stage: artwork behind a rounded screen, with the channel's name and state under it. */
-export function Player({ channel, unavailable, onStart, onClose, factory }: PlayerProps) {
+/** The stage: artwork behind a rounded screen, with a playlist of every channel on it. */
+export function Player({
+  channel,
+  channels = [],
+  onSelect,
+  unavailable,
+  onStart,
+  onClose,
+  factory,
+}: PlayerProps) {
   const { t } = useI18n()
   const [attempt, setAttempt] = useState(0)
+  // Kept here, not in the surface: a new channel mounts a new surface and must not close it.
+  const [playlistOpen, setPlaylistOpen] = useState(false)
 
   if (!channel) {
     return (
@@ -57,9 +64,20 @@ export function Player({ channel, unavailable, onStart, onClose, factory }: Play
       <Surface
         key={`${channel.slug}:${attempt}`}
         channel={channel}
+        channels={channels}
+        playlistOpen={playlistOpen}
+        onPlaylistOpenChange={setPlaylistOpen}
         unavailable={unavailable}
         onRetry={() => setAttempt((value) => value + 1)}
-        {...(onClose ? { onClose } : {})}
+        {...(onSelect ? { onSelect } : {})}
+        {...(onClose
+          ? {
+              onClose: () => {
+                setPlaylistOpen(false)
+                onClose()
+              },
+            }
+          : {})}
         {...(factory ? { factory } : {})}
       />
     </section>
@@ -68,6 +86,10 @@ export function Player({ channel, unavailable, onStart, onClose, factory }: Play
 
 interface SurfaceProps {
   channel: Channel
+  channels: readonly Channel[]
+  playlistOpen: boolean
+  onPlaylistOpenChange: (open: boolean) => void
+  onSelect?: (channel: Channel) => void
   unavailable: boolean
   onRetry: () => void
   onClose?: () => void
@@ -80,8 +102,19 @@ interface SurfaceProps {
  * the slot when the slot is visible again. Nothing is mounted twice, so the stream never
  * plays in two places and the audio cannot overlap.
  */
-function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfaceProps) {
+function Surface({
+  channel,
+  channels,
+  playlistOpen,
+  onPlaylistOpenChange,
+  onSelect,
+  unavailable,
+  onRetry,
+  onClose,
+  factory,
+}: SurfaceProps) {
   const { t } = useI18n()
+  const playlistId = useId()
   const slotRef = useRef<HTMLDivElement>(null)
   // The sticky bar covers the top of the page, so the slot counts as gone once it is under it.
   const visible = useInView(slotRef, { threshold: 0.25, rootMargin: '-72px 0px 0px 0px' })
@@ -90,7 +123,7 @@ function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfacePro
     url: livePlaylistUrl(channel.slug),
     ...(factory ? { factory } : {}),
   })
-  const onAir = state === 'playing' && !unavailable
+  const canBrowse = onSelect !== undefined && channels.length > 0
 
   return (
     <div className={styles.frame}>
@@ -126,6 +159,18 @@ function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfacePro
             )}
           </div>
         )}
+        {canBrowse && !floating && (
+          <button
+            type="button"
+            className={styles.playlistButton}
+            aria-expanded={playlistOpen}
+            aria-controls={playlistId}
+            onClick={() => onPlaylistOpenChange(!playlistOpen)}
+          >
+            <ListIcon />
+            {t('player.playlist')}
+          </button>
+        )}
         <video
           ref={videoRef}
           className={styles.video}
@@ -138,6 +183,15 @@ function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfacePro
         />
         {state === 'loading' && <div className={styles.veil}>{t('player.loadingVeil')}</div>}
         {state === 'stalled' && <div className={styles.veil}>{t('player.bufferingVeil')}</div>}
+        {canBrowse && !floating && playlistOpen && (
+          <Playlist
+            id={playlistId}
+            channels={channels}
+            currentSlug={channel.slug}
+            onSelect={onSelect}
+            onClose={() => onPlaylistOpenChange(false)}
+          />
+        )}
         {state === 'failed' && (
           <div className={styles.veil} role="alert">
             <p>{t('player.failedDetail', { detail: failure ?? '' })}</p>
@@ -147,17 +201,6 @@ function Surface({ channel, unavailable, onRetry, onClose, factory }: SurfacePro
           </div>
         )}
       </div>
-      </div>
-      <div className={styles.meta}>
-        <span className={styles.badge} data-on={onAir}>
-          <span className={styles.tally} aria-hidden="true" />
-        </span>
-        <div className={styles.title}>
-          <h2 className={styles.name}>{channel.name}</h2>
-          <p className={styles.status} role="status">
-            {unavailable ? t('player.unavailableShort') : t(STATE_LABEL[state])}
-          </p>
-        </div>
       </div>
       {unavailable && (
         <p className={styles.notice} role="alert">

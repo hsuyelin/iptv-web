@@ -38,8 +38,7 @@ describe('Player', () => {
     const { log, factory } = recorder()
     render(<Player channel={cctv1} unavailable={false} factory={factory} />)
     expect(log).toEqual(['create#1', 'attach#1', 'load#1 http://relay.test/live/cctv1.m3u8'])
-    expect(screen.getByRole('heading', { name: 'CCTV-1 综合' })).toBeInTheDocument()
-    expect(screen.getByText('Loading the stream')).toBeInTheDocument()
+    expect(screen.getByText('Loading the stream…')).toBeInTheDocument()
   })
 
   it('detaches the first stream before the second one loads', () => {
@@ -64,14 +63,42 @@ describe('Player', () => {
     expect(log.at(-1)).toBe('destroy#1')
   })
 
-  it('follows the video element: playing, buffering, playing again', () => {
+  it('follows the video element: loading, playing, buffering, playing again', () => {
+    render(<Player channel={cctv1} unavailable={false} factory={recorder().factory} />)
+    expect(screen.getByText('Loading the stream…')).toBeInTheDocument()
+    fireEvent.playing(video())
+    expect(screen.queryByText('Loading the stream…')).not.toBeInTheDocument()
+    fireEvent.waiting(video())
+    expect(screen.getByText('Buffering…')).toBeInTheDocument()
+    fireEvent.playing(video())
+    expect(screen.queryByText('Buffering…')).not.toBeInTheDocument()
+  })
+
+  it('shows no on-air status line under the screen', () => {
     render(<Player channel={cctv1} unavailable={false} factory={recorder().factory} />)
     fireEvent.playing(video())
-    expect(screen.getByRole('status')).toHaveTextContent('On air')
-    fireEvent.waiting(video())
-    expect(screen.getByRole('status')).toHaveTextContent('Buffering')
-    fireEvent.playing(video())
-    expect(screen.getByRole('status')).toHaveTextContent('On air')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'CCTV-1 综合' })).not.toBeInTheDocument()
+  })
+
+  it('offers a playlist only when it has channels to list and a way to switch', async () => {
+    const { rerender } = render(<Player channel={cctv1} unavailable={false} factory={recorder().factory} />)
+    expect(screen.queryByRole('button', { name: 'Playlist' })).not.toBeInTheDocument()
+    rerender(<Player channel={cctv1} channels={[cctv1, cctv2]} unavailable={false} factory={recorder().factory} />)
+    expect(screen.queryByRole('button', { name: 'Playlist' })).not.toBeInTheDocument()
+    const picks: string[] = []
+    rerender(
+      <Player
+        channel={cctv1}
+        channels={[cctv1, cctv2]}
+        onSelect={(channel) => picks.push(channel.slug)}
+        unavailable={false}
+        factory={recorder().factory}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Playlist' }))
+    await userEvent.click(screen.getByRole('button', { name: /CCTV-2/ }))
+    expect(picks).toEqual(['cctv2'])
   })
 
   it('shows a failure with a retry that starts a new engine', async () => {
@@ -97,7 +124,6 @@ describe('Player', () => {
   it('warns that the channel is temporarily unavailable when the relay shows its notice', () => {
     render(<Player channel={cctv1} unavailable factory={recorder().factory} />)
     fireEvent.playing(video())
-    expect(screen.getByRole('status')).toHaveTextContent('Temporarily unavailable')
     expect(screen.getByRole('alert')).toHaveTextContent(/temporarily unavailable/i)
   })
 })

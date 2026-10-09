@@ -53,33 +53,23 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('status', { name: 'Online' })).toBeInTheDocument())
   })
 
-  it('filters by name or slug and hides groups that end up empty', async () => {
+  it('shows every group at once, with no search, group switcher or pager', async () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
-    await userEvent.type(screen.getByLabelText('Filter by name'), 'CCTV')
-    expect(within(wall()).getAllByRole('button')).toHaveLength(2)
-    expect(screen.queryByRole('heading', { name: '卫视' })).not.toBeInTheDocument()
-    await userEvent.clear(screen.getByLabelText('Filter by name'))
-    await userEvent.type(screen.getByLabelText('Filter by name'), 'shandong')
-    expect(within(wall()).getAllByRole('button')).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: '卫视' })).toBeInTheDocument()
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Groups' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument()
   })
 
-  it('explains an empty result and offers to clear the filter', async () => {
+  it('shows a long list whole, grouped, without paging', async () => {
+    server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(60))))
     setup()
-    await screen.findByRole('heading', { name: '央视' })
-    await userEvent.type(screen.getByLabelText('Filter by name'), 'zzz')
-    expect(screen.getByText(/No channel matches/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Clear filter' }))
-    expect(screen.getByLabelText('Filter by name')).toHaveValue('')
-    expect(within(wall()).getAllByRole('button')).toHaveLength(4)
-  })
-
-  it('narrows the wall to one group', async () => {
-    setup()
-    await screen.findByRole('heading', { name: '央视' })
-    await userEvent.click(within(screen.getByRole('navigation', { name: 'Groups' })).getByRole('button', { name: /卫视/ }))
-    expect(within(wall()).getAllByRole('button')).toHaveLength(1)
-    expect(screen.queryByRole('heading', { name: '央视' })).not.toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Even' })
+    expect(screen.getByRole('heading', { name: 'Odd' })).toBeInTheDocument()
+    expect(within(wall()).getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(60)
+    expect(tile('Channel 1')).toBeInTheDocument()
+    expect(tile('Channel 60')).toBeInTheDocument()
   })
 
   it('starts playback when a channel is chosen and swaps streams on the next choice', async () => {
@@ -95,7 +85,7 @@ describe('App', () => {
     expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
     expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`, `${RELAY}/live/cctv2.m3u8`])
     expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('heading', { name: 'CCTV-2 财经', level: 2 })).toBeInTheDocument()
+    expect(screen.getByLabelText('CCTV-2 财经 live stream')).toBeInTheDocument()
   })
 
   it('warns when the relay is redirecting the selected channel to its notice stream', async () => {
@@ -141,23 +131,23 @@ describe('App', () => {
     window.localStorage.setItem('iptv-web-locale', 'en')
     setup()
     await screen.findByRole('heading', { name: '央视' })
-    expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
+    expect(wall()).toBeInTheDocument()
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
     await chooseLanguage('简体中文')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('按名称筛选')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '频道' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '其他' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('status', { name: '在线' })).toBeInTheDocument())
 
     await chooseLanguage('繁體中文')
-    expect(screen.getByLabelText('依名稱篩選')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '頻道' })).toBeInTheDocument()
     expect(screen.getByRole('status', { name: '在線' })).toBeInTheDocument()
     expect(screen.getByRole('status', { name: '在線' }).closest('[lang="zh-TW"]')).not.toBeNull()
     expect(window.localStorage.getItem('iptv-web-locale')).toBe('zh-TW')
 
     await chooseLanguage('English')
-    expect(screen.getByLabelText('Filter by name')).toBeInTheDocument()
+    expect(wall()).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /^Language: English/ }))
     expect(screen.getByRole('menuitemradio', { name: 'English' })).toHaveAttribute('aria-checked', 'true')
   })
@@ -190,14 +180,14 @@ describe('App', () => {
     await screen.findByRole('heading', { name: '央视' })
     await userEvent.click(screen.getByRole('button', { name: /^Language: / }))
     expect(screen.getByRole('menu')).toBeInTheDocument()
-    await userEvent.click(screen.getByLabelText('Filter by name'))
+    await userEvent.click(document.body)
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
   it('starts in the saved language, else the browser language, else Simplified Chinese', async () => {
     window.localStorage.setItem('iptv-web-locale', 'zh-TW')
     setup()
-    expect(await screen.findByLabelText('依名稱篩選')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '頻道' })).toBeInTheDocument()
   })
 
   it('offers a senior mode that lists the channels in one large column', async () => {
@@ -210,10 +200,10 @@ describe('App', () => {
     await userEvent.click(toggle)
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveAttribute('aria-pressed', 'true')
     expect(window.localStorage.getItem('iptv-web-senior')).toBe('on')
-    // Same channels, same buttons, now stacked as list lines with a plain on-air label.
+    // Same channels, same buttons, now stacked as list lines.
     expect(within(wall()).getAllByRole('button')).toHaveLength(4)
     await userEvent.click(tile(/CCTV-1/))
-    expect(within(wall()).getByText('On air')).toBeInTheDocument()
+    expect(tile(/CCTV-1/)).toHaveAttribute('aria-pressed', 'true')
 
     await userEvent.click(screen.getByRole('button', { name: 'Senior mode' }))
     expect(window.localStorage.getItem('iptv-web-senior')).toBe('off')
@@ -223,7 +213,7 @@ describe('App', () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: senior mode, the language menu, start, filter, group buttons, then the tiles.
+    // Order: senior mode, the language menu, start, then the tiles.
     // A standard visitor has no page tabs to stop at.
     await user.tab()
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
@@ -231,11 +221,6 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /^Language: / })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: 'Start watching' })).toHaveFocus()
-    await user.tab()
-    expect(screen.getByLabelText('Filter by name')).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('button', { name: /All channels/ })).toHaveFocus()
-    // The remaining stops are the group buttons, then the first tile.
     const tile = screen.getByRole('button', { name: /CCTV-1/ })
     for (let stops = 0; stops < 10 && document.activeElement !== tile; stops += 1) {
       await user.tab()
@@ -246,61 +231,60 @@ describe('App', () => {
     expect(screen.getByLabelText(/CCTV-1 综合 live stream/)).toBeInTheDocument()
   })
 
-  describe('pagination', () => {
-    const useMany = (count: number) =>
-      server.use(http.get(`${RELAY}/channels`, () => HttpResponse.json(manyChannelsPayload(count))))
-    const pager = () => screen.getByRole('navigation', { name: 'Pages' })
+  describe('playlist', () => {
+    const open = async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Playlist' }))
+      return screen.getByRole('complementary', { name: 'Playlist' })
+    }
 
-    it('splits a long list into pages and moves between them', async () => {
-      useMany(60)
-      setup()
-      await screen.findByRole('heading', { name: 'Even' })
-      expect(within(wall()).getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(24)
-      expect(tile('Channel 1')).toBeInTheDocument()
-      // Channels are listed group by group: the Even group (odd numbers) fills page 1.
-      expect(screen.queryByRole('button', { name: 'Channel 49' })).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
-
-      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
-      expect(screen.getByRole('button', { name: 'Channel 49' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Channel 1' })).not.toBeInTheDocument()
-      expect(within(pager()).getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
-
-      await userEvent.click(within(pager()).getByRole('button', { name: 'Page 3' }))
-      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Channel 60' })).toBeInTheDocument()
-    })
-
-    it('has no pager when everything fits on one page', async () => {
+    it('is offered only once something is playing', async () => {
       setup()
       await screen.findByRole('heading', { name: '央视' })
-      expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Playlist' })).not.toBeInTheDocument()
+      await userEvent.click(tile(/CCTV-1/))
+      expect(screen.getByRole('button', { name: 'Playlist' })).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
     })
 
-    it('goes back to the first page when the filter or group changes', async () => {
-      useMany(60)
-      setup()
-      await screen.findByRole('heading', { name: 'Even' })
-      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
-      await userEvent.type(screen.getByLabelText('Filter by name'), 'Channel 1')
-      // "Channel 1", "Channel 10".."Channel 19": 11 channels, so one page and no pager.
-      expect(screen.getByRole('button', { name: 'Channel 1' })).toBeInTheDocument()
-      expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument()
-      await userEvent.clear(screen.getByLabelText('Filter by name'))
-      expect(within(pager()).getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    it('opens a sidebar with every channel and switches the stream on a click', async () => {
+      const { loads, destroyed } = setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      const list = await open()
+      expect(screen.getByRole('button', { name: 'Playlist' })).toHaveAttribute('aria-expanded', 'true')
+      expect(within(list).getAllByRole('button').filter((b) => b.className.includes('item'))).toHaveLength(4)
+      expect(within(list).getByRole('button', { name: /CCTV-1/ })).toHaveAttribute('aria-current', 'true')
+
+      await userEvent.click(within(list).getByRole('button', { name: /CCTV-2/ }))
+      expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
+      expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`, `${RELAY}/live/cctv2.m3u8`])
+      // The sidebar stays open so the next channel is one click away.
+      expect(within(screen.getByRole('complementary', { name: 'Playlist' })).getByRole('button', { name: /CCTV-2/ })).toHaveAttribute('aria-current', 'true')
+      expect(within(wall()).getByRole('button', { name: /CCTV-2/ })).toHaveAttribute('aria-pressed', 'true')
     })
 
-    it('uses smaller pages in senior mode and keeps the selection across pages', async () => {
-      useMany(60)
+    it('closes from its own button and with Escape', async () => {
       setup()
-      await screen.findByRole('heading', { name: 'Even' })
-      await userEvent.click(tile('Channel 1'))
-      await userEvent.click(screen.getByRole('button', { name: 'Senior mode' }))
-      expect(within(wall()).getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(10)
-      expect(within(pager()).getByRole('button', { name: 'Page 6' })).toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
-      // The channel on air is on page 1, but the player keeps playing it.
-      expect(screen.getByLabelText('Channel 1 live stream')).toBeInTheDocument()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      const list = await open()
+      await userEvent.click(within(list).getByRole('button', { name: 'Close the playlist' }))
+      expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
+
+      const reopened = await open()
+      fireEvent.keyDown(within(reopened).getByRole('button', { name: /CCTV-1/ }), { key: 'Escape' })
+      expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
+    })
+
+    it('gives way to the floating window', async () => {
+      setup()
+      await screen.findByRole('heading', { name: '央视' })
+      await userEvent.click(tile(/CCTV-1/))
+      await open()
+      const slot = screen.getByLabelText(/live stream/).closest('[data-floating]')!.parentElement!
+      act(() => setInView(slot, false))
+      expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Playlist' })).not.toBeInTheDocument()
     })
   })
 
@@ -382,13 +366,13 @@ describe('App', () => {
     it('follows a Chinese browser', async () => {
       vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['zh-HK', 'en'])
       setup()
-      expect(await screen.findByLabelText('依名稱篩選')).toBeInTheDocument()
+      expect(await screen.findByRole('region', { name: '頻道' })).toBeInTheDocument()
     })
 
     it('uses Simplified Chinese when the browser reports no language', async () => {
       vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue([])
       setup()
-      expect(await screen.findByLabelText('按名称筛选')).toBeInTheDocument()
+      expect(await screen.findByRole('region', { name: '频道' })).toBeInTheDocument()
     })
   })
 

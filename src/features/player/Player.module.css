@@ -118,60 +118,6 @@
   color: var(--ink-muted);
 }
 
-.meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: min(100%, calc(62dvh * 16 / 9));
-  margin-inline: auto;
-  padding: var(--space-3) var(--space-4);
-  background: var(--glass);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--glass-line);
-  border-radius: var(--radius-md);
-}
-
-.badge {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.tally {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-
-.badge[data-on='true'] .tally {
-  background: var(--accent);
-  box-shadow: 0 0 14px 2px var(--accent);
-}
-
-.title {
-  min-width: 0;
-}
-
-.name {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: 700;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.status {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
-}
-
 .notice {
   width: min(100%, calc(62dvh * 16 / 9));
   margin: 0 auto;
@@ -180,6 +126,31 @@
   background: var(--glass);
   border: 1px solid var(--caution);
   border-radius: var(--radius-md);
+}
+
+/* Sits on the screen, clear of the native controls along the bottom. */
+.playlistButton {
+  position: absolute;
+  inset: var(--space-3) var(--space-3) auto auto;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-sm);
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-pill);
+}
+
+.playlistButton:hover,
+.playlistButton[aria-expanded='true'] {
+  background: rgba(60, 60, 60, 0.8);
 }
 
 @media (max-width: 640px) {

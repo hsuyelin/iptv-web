@@ -187,30 +187,6 @@
   }
 }
 
-.none {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  background: var(--glass);
-  border: 1px solid var(--glass-line);
-  border-radius: var(--radius-lg);
-}
-
-.none p {
-  margin: 0;
-}
-
-.clear {
-  min-height: var(--control);
-  padding: 0 var(--space-5);
-  font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
-  border: 0;
-  border-radius: var(--radius-sm);
-}
-
 /* Senior mode: a single column of wide lines, easy to read and to hit. */
 .group {
   min-width: 0;
@@ -227,7 +203,7 @@
 
 .line {
   display: grid;
-  grid-template-columns: clamp(96px, 22vw, 160px) minmax(0, 1fr) auto;
+  grid-template-columns: clamp(96px, 22vw, 160px) minmax(0, 1fr);
   align-items: center;
   gap: var(--space-4);
   width: 100%;
@@ -274,16 +250,6 @@
   overflow-wrap: anywhere;
 }
 
-.lineState {
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--on-accent);
-  background: var(--accent);
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-}
-
 .line[data-unavailable='true'] .lineName::after {
   content: ' •';
   color: var(--caution);
@@ -292,10 +258,5 @@
 @media (max-width: 420px) {
   .line {
     grid-template-columns: 88px minmax(0, 1fr);
-  }
-
-  .lineState {
-    grid-column: 2;
-    justify-self: start;
   }
 }

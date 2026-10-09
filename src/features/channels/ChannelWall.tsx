@@ -3,66 +3,33 @@ import type { Channel } from '../../api/types'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/Icons'
 import { useI18n } from '../../i18n/locale'
 import { LogoImage } from '../../components/LogoImage'
-import { Pagination } from '../../components/Pagination'
-import { groupChannels, OTHER_GROUP, pageGroups } from '../../lib/channels'
+import { groupChannels, OTHER_GROUP } from '../../lib/channels'
 import styles from './ChannelWall.module.css'
 
 interface ChannelWallProps {
   channels: readonly Channel[]
-  filter: string
-  /** Group to show, or null for all groups. */
-  group: string | null
   selectedSlug: string | null
   onSelect: (channel: Channel) => void
-  /** Clears the filter and the group choice. */
-  onClear: () => void
   /** Slugs the relay is redirecting to its notice stream. */
   unavailable: readonly string[]
   /** `rows` swipes per group; `list` stacks every channel in one large column. */
   layout: 'rows' | 'list'
-  /** Current page, 1-based, and how many channels one page holds. */
-  page: number
-  pageSize: number
-  onPageChange: (page: number) => void
 }
 
-/** The channels as one swipeable row per group, with the selected one marked on air. */
+/** Every channel, one swipeable row per group, with the selected one marked. */
 export function ChannelWall({
   channels,
-  filter,
-  group,
   selectedSlug,
   onSelect,
-  onClear,
   unavailable,
   layout,
-  page,
-  pageSize,
-  onPageChange,
 }: ChannelWallProps) {
   const { t } = useI18n()
-  const matching = groupChannels(channels, filter).filter(
-    (entry) => group === null || entry.name === group,
-  )
-  const current = pageGroups(matching, page, pageSize)
-  const visible = current.groups
-  if (visible.length === 0) {
-    return (
-      <section className={styles.wall} aria-label={t('wall.label')}>
-        <div className={styles.none}>
-          <p>{t('wall.none', { filter })}</p>
-          <button type="button" className={styles.clear} onClick={onClear}>
-            {t('wall.clear')}
-          </button>
-        </div>
-      </section>
-    )
-  }
   return (
     <section className={styles.wall} aria-label={t('wall.label')}>
-      {visible.map((entry) => {
+      {groupChannels(channels).map((entry) => {
         const props = {
-          title: entry.name === OTHER_GROUP ? t('find.other') : entry.name,
+          title: entry.name === OTHER_GROUP ? t('wall.other') : entry.name,
           channels: entry.channels,
           selectedSlug,
           unavailable,
@@ -74,7 +41,6 @@ export function ChannelWall({
           <Row key={entry.name} {...props} />
         )
       })}
-      <Pagination page={current.page} pageCount={current.pageCount} onPageChange={onPageChange} />
     </section>
   )
 }
@@ -141,31 +107,26 @@ function Row({ title, channels, selectedSlug, unavailable, onSelect }: RowProps)
 
 /** Senior mode: one large, plainly labelled line per channel. */
 function ListGroup({ title, channels, selectedSlug, unavailable, onSelect }: RowProps) {
-  const { t } = useI18n()
   return (
     <div className={styles.group}>
       <h2 className={styles.sectionTitle}>{title}</h2>
       <ul className={styles.list}>
-        {channels.map((channel) => {
-          const onAir = channel.slug === selectedSlug
-          return (
-            <li key={channel.slug}>
-              <button
-                type="button"
-                className={styles.line}
-                aria-pressed={onAir}
-                data-unavailable={unavailable.includes(channel.slug.toLowerCase())}
-                onClick={() => onSelect(channel)}
-              >
-                <span className={styles.lineLogo}>
-                  <LogoImage src={channel.logo} />
-                </span>
-                <span className={styles.lineName}>{channel.name}</span>
-                {onAir && <span className={styles.lineState}>{t('player.playing')}</span>}
-              </button>
-            </li>
-          )
-        })}
+        {channels.map((channel) => (
+          <li key={channel.slug}>
+            <button
+              type="button"
+              className={styles.line}
+              aria-pressed={channel.slug === selectedSlug}
+              data-unavailable={unavailable.includes(channel.slug.toLowerCase())}
+              onClick={() => onSelect(channel)}
+            >
+              <span className={styles.lineLogo}>
+                <LogoImage src={channel.logo} />
+              </span>
+              <span className={styles.lineName}>{channel.name}</span>
+            </button>
+          </li>
+        ))}
       </ul>
     </div>
   )
