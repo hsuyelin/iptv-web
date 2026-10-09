@@ -1,0 +1,73 @@
+.app {
+  min-height: 100dvh;
+  background: var(--wall);
+  color: var(--ink);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'player'
+    'rail'
+    'wall';
+  gap: var(--space-5);
+  align-items: start;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+}
+
+/* On wide screens the filter sits beside both the player and the wall. */
+@media (min-width: 720px) {
+  .main {
+    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-areas:
+      'rail player'
+      'rail wall';
+    column-gap: var(--space-6);
+  }
+}
+
+.player {
+  grid-area: player;
+  min-width: 0;
+}
+
+.rail {
+  grid-area: rail;
+}
+
+.wall {
+  grid-area: wall;
+  min-width: 0;
+}
+
+.note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.failure {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  background: var(--panel);
+  border-left: 4px solid var(--caution);
+}
+
+.failure p {
+  margin: 0;
+}
+
+.retry {
+  padding: var(--space-2) var(--space-4);
+  background: var(--tally);
+  color: var(--on-tally);
+  border: 0;
+  font-weight: 600;
+  cursor: pointer;
+}

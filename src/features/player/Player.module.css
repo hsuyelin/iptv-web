@@ -1,0 +1,130 @@
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.screen {
+  position: relative;
+  /* Never taller than 60% of the window, so the wall stays in view. */
+  width: min(100%, calc(60dvh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  background: var(--screen);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--screen);
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--on-screen);
+  background: color-mix(in srgb, var(--screen) 72%, transparent);
+  pointer-events: none;
+}
+
+.veil button {
+  pointer-events: auto;
+}
+
+.retry {
+  font: inherit;
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  color: var(--on-tally);
+  background: var(--tally);
+  border: 0;
+  cursor: pointer;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tally {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition: background-color 240ms ease, transform 240ms ease;
+}
+
+.tally[data-on='true'] {
+  background: var(--tally);
+  transform: scale(1.15);
+}
+
+.title {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  margin: 2px 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--caution);
+  background: var(--panel);
+  color: var(--ink);
+  max-width: 70ch;
+}
+
+.empty {
+  min-height: 140px;
+  display: grid;
+  place-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  text-align: center;
+  background: var(--panel);
+  border: 1px dashed var(--line-strong);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tally {
+    transition: none;
+  }
+
+  .tally[data-on='true'] {
+    transform: none;
+  }
+}

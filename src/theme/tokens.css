@@ -1,0 +1,41 @@
+/*
+ * Design tokens. Colors are `light-dark(light, dark)` pairs, so one declaration covers
+ * both schemes and follows the element's `color-scheme`.
+ *
+ * Palette: a control room. A cool gray wall, white panels, and one signal red, the tally
+ * light that marks what is on air. Teal means healthy; amber means look at this.
+ */
+:root {
+  color-scheme: light dark;
+
+  --wall: light-dark(#e8ecf1, #0f1620);
+  --panel: light-dark(#ffffff, #18222f);
+  --panel-raised: light-dark(#f4f6f9, #1f2b3a);
+  --ink: light-dark(#17212e, #e7ecf3);
+  --ink-muted: light-dark(#4b5a6b, #a3b1c2);
+  --line: light-dark(#c9d2dc, #2c3a4b);
+  --line-strong: light-dark(#6b7a8b, #7a8da3);
+
+  --tally: light-dark(#d42b3e, #ff5a6e);
+  --on-tally: light-dark(#ffffff, #1a0509);
+  --signal: light-dark(#096870, #3cc2cb);
+  --caution: light-dark(#8f5a0e, #e0a34a);
+
+  --screen: #05080c;
+  --on-screen: #e7ecf3;
+
+  --font: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
