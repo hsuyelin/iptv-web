@@ -32,6 +32,13 @@ export const RefreshIcon = () => (
   </Icon>
 )
 
+export const VolumeIcon = () => (
+  <Icon>
+    <path d="M11 5 6 9H3v6h3l5 4z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+  </Icon>
+)
+
 export const PlayIcon = () => (
   <Icon fill="currentColor" stroke="none">
     <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z" />

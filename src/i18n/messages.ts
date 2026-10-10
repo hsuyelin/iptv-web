@@ -96,6 +96,7 @@ const en = {
   'player.bufferingVeil': 'Buffering…',
   'player.failedDetail': 'Playback failed. {detail}',
   'player.retry': 'Retry',
+  'player.unmute': 'Tap for sound',
   'player.liveStream': '{name} live stream',
   'player.unavailableNotice':
     'This channel is temporarily unavailable. The relay is showing its notice stream and will try the channel again shortly.',
@@ -184,6 +185,7 @@ const zhCN: Messages = {
   'player.bufferingVeil': '缓冲中…',
   'player.failedDetail': '播放失败。{detail}',
   'player.retry': '重试',
+  'player.unmute': '点击开启声音',
   'player.liveStream': '{name} 直播',
   'player.unavailableNotice':
     '该频道暂时不可用。中继正在播放提示流，稍后会再次尝试该频道。',
@@ -267,6 +269,7 @@ const zhTW: Messages = {
   'player.bufferingVeil': '緩衝中…',
   'player.failedDetail': '播放失敗。{detail}',
   'player.retry': '重試',
+  'player.unmute': '點擊開啟聲音',
   'player.liveStream': '{name} 直播',
   'player.unavailableNotice':
     '此頻道暫時無法使用。中繼正在播放提示串流，稍後會再次嘗試此頻道。',

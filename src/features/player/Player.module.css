@@ -97,6 +97,39 @@
   background: var(--accent-hover);
 }
 
+/* Offered while the browser made the stream start silent; in the middle, clear of the bars. */
+.unmute {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control);
+  padding: 0 var(--space-4);
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+  background: rgba(20, 20, 20, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+:global(.legacy) .unmute {
+  display: block;
+  white-space: nowrap;
+}
+
+:global(.legacy) .unmute svg {
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+
 .empty {
   position: relative;
   top: auto;

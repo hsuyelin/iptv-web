@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
 import { compatWanted } from '../../lib/compat'
-import { ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlayIcon, RefreshIcon } from '../../components/Icons'
+import { ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlayIcon, RefreshIcon, VolumeIcon } from '../../components/Icons'
 import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
 import type { MessageKey } from '../../i18n/messages'
@@ -165,7 +165,7 @@ function Surface({
   const floating = !visible
   // Decided once per screen: switching the stream under a playing video would restart it.
   const [compat] = useState(compatWanted)
-  const { videoRef, state, failure, handlers } = useHlsPlayback({
+  const { videoRef, state, failure, handlers, muted, unmute } = useHlsPlayback({
     url: livePlaylistUrl(channel.slug, compat),
     ...(factory ? { factory } : {}),
   })
@@ -254,11 +254,16 @@ function Surface({
           className={styles.video}
           controls
           autoPlay
-          muted
           playsInline
           aria-label={t('player.liveStream', { name: channel.name })}
           {...handlers}
         />
+        {muted && state !== 'failed' && (
+          <button type="button" className={styles.unmute} onClick={unmute}>
+            <VolumeIcon />
+            {t('player.unmute')}
+          </button>
+        )}
         {state === 'loading' && <div className={styles.veil}>{t('player.loadingVeil')}</div>}
         {state === 'stalled' && <div className={styles.veil}>{t('player.bufferingVeil')}</div>}
         {canBrowse && !floating && playlistOpen && (
