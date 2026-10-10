@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
 import { compatWanted } from '../../lib/compat'
@@ -62,7 +62,12 @@ export function Player({
   const { t } = useI18n()
   const [attempt, setAttempt] = useState(0)
   // Survives the remount a reconnect causes; cleared once the picture is playing again.
-  const autoReconnects = useRef(0)
+  const [autoReconnects, setAutoReconnects] = useState(0)
+  const autoRetry = useCallback(() => {
+    setAutoReconnects((value) => value + 1)
+    setAttempt((value) => value + 1)
+  }, [])
+  const settled = useCallback(() => setAutoReconnects(0), [])
   // Kept here, not in the surface: a new channel mounts a new surface and must not close it.
   const [playlistOpen, setPlaylistOpen] = useState(false)
 
@@ -110,7 +115,10 @@ export function Player({
         onPlaylistOpenChange={setPlaylistOpen}
         unavailable={unavailable}
         onRetry={() => setAttempt((value) => value + 1)}
-        autoReconnects={autoReconnects}
+        canAutoRetry={autoReconnects < AUTO_RECONNECTS}
+        autoRetryCount={autoReconnects}
+        onAutoRetry={autoRetry}
+        onSettled={settled}
         {...(onSelect
           ? {
               onSelect: (next: Channel) => {
@@ -143,7 +151,10 @@ interface SurfaceProps {
   onSelect?: (channel: Channel) => void
   unavailable: boolean
   onRetry: () => void
-  autoReconnects: { current: number }
+  canAutoRetry: boolean
+  autoRetryCount: number
+  onAutoRetry: () => void
+  onSettled: () => void
   onClose?: () => void
   factory?: EngineFactory
 }
@@ -162,7 +173,10 @@ function Surface({
   onSelect,
   unavailable,
   onRetry,
-  autoReconnects,
+  canAutoRetry,
+  autoRetryCount,
+  onAutoRetry,
+  onSettled,
   onClose,
   factory,
 }: SurfaceProps) {
@@ -179,24 +193,17 @@ function Surface({
     ...(factory ? { factory } : {}),
   })
 
-  const retryRef = useRef(onRetry)
-  retryRef.current = onRetry
   // Reconnect by itself, without a page refresh: after a failure, or after a long stall.
   useEffect(() => {
     if (state === 'playing') {
-      autoReconnects.current = 0
+      onSettled()
       return undefined
     }
-    if ((state !== 'failed' && state !== 'stalled') || autoReconnects.current >= AUTO_RECONNECTS) {
-      return undefined
-    }
-    const wait = state === 'failed' ? 2000 * (autoReconnects.current + 1) : STALL_LIMIT_MS
-    const timer = window.setTimeout(() => {
-      autoReconnects.current += 1
-      retryRef.current()
-    }, wait)
+    if ((state !== 'failed' && state !== 'stalled') || !canAutoRetry) return undefined
+    const wait = state === 'failed' ? 2000 * (autoRetryCount + 1) : STALL_LIMIT_MS
+    const timer = window.setTimeout(onAutoRetry, wait)
     return () => window.clearTimeout(timer)
-  }, [state, autoReconnects])
+  }, [state, canAutoRetry, autoRetryCount, onAutoRetry, onSettled])
   const canBrowse = onSelect !== undefined && channels.length > 0
 
   return (

@@ -333,12 +333,14 @@ describe('App', () => {
     setup()
     await screen.findByRole('heading', { name: '央视' })
     const user = userEvent.setup()
-    // Order: senior mode, the language menu, the playlist button, then the tiles.
+    // Order: senior mode, the language menu, the reconnect and playlist buttons, then the tiles.
     // A standard visitor has no page tabs to stop at.
     await user.tab()
     expect(screen.getByRole('button', { name: 'Senior mode' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: /^Language: / })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Reconnect the stream' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('button', { name: 'Playlist' })).toHaveFocus()
     const tile = screen.getByRole('button', { name: /CCTV-2/ })
@@ -376,8 +378,9 @@ describe('App', () => {
       await userEvent.click(within(list).getByRole('button', { name: /CCTV-2/ }))
       expect(destroyed).toEqual([`${RELAY}/live/cctv1.m3u8`])
       expect(loads).toEqual([`${RELAY}/live/cctv1.m3u8`, `${RELAY}/live/cctv2.m3u8`])
-      // The sidebar stays open so the next channel is one click away.
-      expect(within(screen.getByRole('complementary', { name: 'Playlist' })).getByRole('button', { name: /CCTV-2/ })).toHaveAttribute('aria-current', 'true')
+      // The sidebar closes after a pick and stays closed until it is opened again.
+      expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Playlist' })).toHaveAttribute('aria-expanded', 'false')
       expect(within(wall()).getByRole('button', { name: /CCTV-2/ })).toHaveAttribute('aria-pressed', 'true')
     })
 
