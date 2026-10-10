@@ -88,5 +88,18 @@ export function useHlsPlayback({ url, factory = createDefaultEngine }: Options) 
     setMuted(false)
   }
 
+  // A browser only allows sound after a tap or key press on the page, so while the stream is
+  // silent for that reason, the first one anywhere on the page turns the sound on.
+  useEffect(() => {
+    if (!muted) return undefined
+    const events = ['click', 'touchend', 'keydown']
+    const turnOn = () => {
+      const video = videoRef.current
+      if (video) video.muted = false
+    }
+    events.forEach((name) => document.addEventListener(name, turnOn, { once: true }))
+    return () => events.forEach((name) => document.removeEventListener(name, turnOn))
+  }, [muted])
+
   return { videoRef, state, failure, handlers, muted, unmute }
 }
