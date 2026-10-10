@@ -25,6 +25,13 @@ export const ListIcon = () => (
   </Icon>
 )
 
+export const RefreshIcon = () => (
+  <Icon>
+    <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+    <path d="M20 4v7h-7" />
+  </Icon>
+)
+
 export const PlayIcon = () => (
   <Icon fill="currentColor" stroke="none">
     <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z" />

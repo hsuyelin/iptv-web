@@ -25,7 +25,14 @@ export function Playlist({ id, channels, currentSlug, onSelect, onClose }: Playl
   }, [])
 
   return (
-    <aside
+    <div className={styles.layer}>
+      <button
+        type="button"
+        className={styles.backdrop}
+        aria-label={t('player.playlistClose')}
+        onClick={onClose}
+      />
+      <aside
       id={id}
       className={styles.playlist}
       aria-label={t('player.playlist')}
@@ -74,6 +81,7 @@ export function Playlist({ id, channels, currentSlug, onSelect, onClose }: Playl
           </section>
         ))}
       </div>
-    </aside>
+      </aside>
+    </div>
   )
 }

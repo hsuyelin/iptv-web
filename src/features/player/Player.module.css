@@ -169,41 +169,63 @@
 }
 
 /*
- * An icon on the screen's top right: the native control bar along the bottom cannot take
- * extra buttons, and a bare icon keeps the picture clear. Like the native bar it shows
- * on hover or focus; touch screens, which have no hover, always show it.
+ * Two tabs hugging the screen's edges at mid height, clear of the native bars along the
+ * top and bottom (iPad on iOS 11 puts its volume control there). The playlist tab sits
+ * flush on the right edge and moves out to the panel's edge when the playlist opens;
+ * the reconnect tab sits on the left. Touch screens always show them, others on hover.
  */
-.playlistButton {
+.playlistButton,
+.reconnectButton {
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  z-index: 2;
+  top: 50%;
+  z-index: 4;
   display: grid;
   place-items: center;
-  width: var(--control-sm);
-  height: var(--control-sm);
-  font-size: 1.25rem;
+  width: 22px;
+  height: 56px;
+  margin-top: -28px;
+  padding: 0;
+  font-size: 1.1rem;
   color: var(--ink);
   background: rgba(20, 20, 20, 0.55);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: 1px solid var(--glass-line);
-  border-radius: 50%;
-  transition: opacity 0.2s, background 0.15s;
+  transition: opacity 0.2s, background 0.15s, right 0.2s;
+}
+
+.playlistButton {
+  right: 0;
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+}
+
+.reconnectButton {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+}
+
+.playlistButton[data-open='true'] {
+  right: min(70%, 320px);
 }
 
 .playlistButton:hover,
+.reconnectButton:hover,
 .playlistButton[aria-expanded='true'] {
   background: rgba(60, 60, 60, 0.8);
 }
 
 @media (hover: hover) {
-  .playlistButton {
+  .playlistButton,
+  .reconnectButton {
     opacity: 0;
   }
 
   .screen:hover .playlistButton,
+  .screen:hover .reconnectButton,
   .playlistButton:focus-visible,
+  .reconnectButton:focus-visible,
   .playlistButton[aria-expanded='true'] {
     opacity: 1;
   }
@@ -342,6 +364,7 @@
 }
 
 :global(.legacy) .playlistButton,
+:global(.legacy) .reconnectButton,
 :global(.legacy) .floatButton {
   display: block;
   text-align: center;

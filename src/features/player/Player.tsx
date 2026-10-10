@@ -1,8 +1,8 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { Channel } from '../../api/types'
 import { livePlaylistUrl } from '../../api/client'
 import { compatWanted } from '../../lib/compat'
-import { ArrowUpIcon, CloseIcon, ListIcon, PlayIcon } from '../../components/Icons'
+import { ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlayIcon, RefreshIcon } from '../../components/Icons'
 import { useInView } from '../../components/useInView'
 import { useI18n } from '../../i18n/locale'
 import type { MessageKey } from '../../i18n/messages'
@@ -30,6 +30,11 @@ interface PlayerProps {
   factory?: EngineFactory
 }
 
+/** Automatic reconnects in a row before the viewer is left with the manual button. */
+const AUTO_RECONNECTS = 3
+/** How long playback may sit buffering before the stream is considered dropped. */
+const STALL_LIMIT_MS = 20000
+
 export type StageStatus = 'idle' | 'loading' | 'none'
 
 const STAGE_TITLE: Record<Exclude<StageStatus, 'loading'>, MessageKey> = {
@@ -56,6 +61,8 @@ export function Player({
 }: PlayerProps) {
   const { t } = useI18n()
   const [attempt, setAttempt] = useState(0)
+  // Survives the remount a reconnect causes; cleared once the picture is playing again.
+  const autoReconnects = useRef(0)
   // Kept here, not in the surface: a new channel mounts a new surface and must not close it.
   const [playlistOpen, setPlaylistOpen] = useState(false)
 
@@ -103,6 +110,7 @@ export function Player({
         onPlaylistOpenChange={setPlaylistOpen}
         unavailable={unavailable}
         onRetry={() => setAttempt((value) => value + 1)}
+        autoReconnects={autoReconnects}
         {...(onSelect ? { onSelect } : {})}
         {...(onClose
           ? {
@@ -126,6 +134,7 @@ interface SurfaceProps {
   onSelect?: (channel: Channel) => void
   unavailable: boolean
   onRetry: () => void
+  autoReconnects: { current: number }
   onClose?: () => void
   factory?: EngineFactory
 }
@@ -144,6 +153,7 @@ function Surface({
   onSelect,
   unavailable,
   onRetry,
+  autoReconnects,
   onClose,
   factory,
 }: SurfaceProps) {
@@ -159,6 +169,25 @@ function Surface({
     url: livePlaylistUrl(channel.slug, compat),
     ...(factory ? { factory } : {}),
   })
+
+  const retryRef = useRef(onRetry)
+  retryRef.current = onRetry
+  // Reconnect by itself, without a page refresh: after a failure, or after a long stall.
+  useEffect(() => {
+    if (state === 'playing') {
+      autoReconnects.current = 0
+      return undefined
+    }
+    if ((state !== 'failed' && state !== 'stalled') || autoReconnects.current >= AUTO_RECONNECTS) {
+      return undefined
+    }
+    const wait = state === 'failed' ? 2000 * (autoReconnects.current + 1) : STALL_LIMIT_MS
+    const timer = window.setTimeout(() => {
+      autoReconnects.current += 1
+      retryRef.current()
+    }, wait)
+    return () => window.clearTimeout(timer)
+  }, [state, autoReconnects])
   const canBrowse = onSelect !== undefined && channels.length > 0
 
   return (
@@ -195,6 +224,17 @@ function Surface({
             )}
           </div>
         )}
+        {!floating && (
+          <button
+            type="button"
+            className={styles.reconnectButton}
+            aria-label={t('player.reconnect')}
+            title={t('player.reconnect')}
+            onClick={onRetry}
+          >
+            <RefreshIcon />
+          </button>
+        )}
         {canBrowse && !floating && (
           <button
             type="button"
@@ -203,9 +243,10 @@ function Surface({
             title={t('player.playlist')}
             aria-expanded={playlistOpen}
             aria-controls={playlistId}
+            data-open={playlistOpen}
             onClick={() => onPlaylistOpenChange(!playlistOpen)}
           >
-            <ListIcon />
+            {playlistOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
           </button>
         )}
         <video

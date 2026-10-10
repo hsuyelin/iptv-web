@@ -74,6 +74,7 @@ const en = {
   'player.floating': 'Floating player',
   'player.playlist': 'Playlist',
   'player.playlistClose': 'Close the playlist',
+  'player.reconnect': 'Reconnect the stream',
 
   'player.emptyTitle': 'Nothing on air',
   'player.emptyText': 'Pick a channel below to start watching.',
@@ -161,6 +162,7 @@ const zhCN: Messages = {
   'player.floating': '悬浮播放器',
   'player.playlist': '播放列表',
   'player.playlistClose': '关闭播放列表',
+  'player.reconnect': '重新连接直播流',
 
   'player.emptyTitle': '当前没有播放',
   'player.emptyText': '从下方选择一个频道开始观看。',
@@ -244,6 +246,7 @@ const zhTW: Messages = {
   'player.floating': '懸浮播放器',
   'player.playlist': '播放清單',
   'player.playlistClose': '關閉播放清單',
+  'player.reconnect': '重新連線直播串流',
   'player.emptyTitle': '目前沒有播放',
   'player.emptyText': '從下方選擇一個頻道開始觀看。',
   'player.noneTitle': '暫無頻道',
