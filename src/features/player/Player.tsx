@@ -111,7 +111,16 @@ export function Player({
         unavailable={unavailable}
         onRetry={() => setAttempt((value) => value + 1)}
         autoReconnects={autoReconnects}
-        {...(onSelect ? { onSelect } : {})}
+        {...(onSelect
+          ? {
+              onSelect: (next: Channel) => {
+                // The state lives here, so it outlasts the surface the new channel replaces:
+                // close it now, or the new surface would open with the playlist again.
+                setPlaylistOpen(false)
+                onSelect(next)
+              },
+            }
+          : {})}
         {...(onClose
           ? {
               onClose: () => {

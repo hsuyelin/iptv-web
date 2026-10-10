@@ -160,6 +160,7 @@ describe('Player', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Playlist' }))
     await userEvent.click(screen.getByRole('button', { name: /CCTV-2/ }))
     expect(picks).toEqual(['cctv2'])
+    expect(screen.queryByRole('complementary', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
   it('shows a failure with a retry that starts a new engine', async () => {
